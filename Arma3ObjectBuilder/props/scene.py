@@ -31,6 +31,20 @@ def color_conversion_update(self, context):
         self.output_linear = rgb_out
 
 
+def tag_view3d_redraw(self, context):
+    if not context.window_manager:
+        return
+
+    for obj in bpy.data.objects:
+        if obj.get("a3ob_proxy_live_preview"):
+            obj.display_type = self.live_preview_mode
+
+    for window in context.window_manager.windows:
+        for area in window.screen.areas:
+            if area.type == 'VIEW_3D':
+                area.tag_redraw()
+
+
 class A3OB_PG_outliner_proxy(bpy.types.PropertyGroup):
     obj: bpy.props.StringProperty(name="Object Name")
     name: bpy.props.StringProperty(name="Proxy Type")
@@ -72,6 +86,20 @@ class A3OB_PG_lod_object(bpy.types.PropertyGroup):
 class A3OB_PG_proxies(bpy.types.PropertyGroup):
     lod_objects: bpy.props.CollectionProperty(type=A3OB_PG_lod_object)
     lod_objects_index: bpy.props.IntProperty(name="Selection Index")
+    live_preview: bpy.props.BoolProperty(
+        name = "Live Editing",
+        description = "Show non-selectable preview meshes for proxy paths"
+    )
+    live_preview_mode: bpy.props.EnumProperty(
+        name = "Display",
+        description = "Display mode for live proxy previews",
+        items = (
+            ('WIRE', "Wire", "Draw proxy preview edges"),
+            ('SOLID', "Solid", "Draw proxy preview faces")
+        ),
+        default = 'WIRE',
+        update = tag_view3d_redraw
+    )
 
 
 class A3OB_PG_common_data_item(bpy.types.PropertyGroup):
