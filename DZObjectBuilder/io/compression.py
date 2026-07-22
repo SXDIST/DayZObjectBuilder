@@ -17,7 +17,7 @@ class LZO_Error(Exception):
 # https://github.com/FFmpeg/FFmpeg/blob/master/libavutil/lzo.c
 # The original LZO implementations as defined by Markus F.X.J. Oberhumer:
 # https://www.oberhumer.com/opensource/lzo/
-def lzo1x_decompress(file, expected):
+def lzo1x_decompress(file, expected, bi_variant = False):
     state = 0
     start = file.tell()
     output = bytearray()
@@ -107,9 +107,13 @@ def lzo1x_decompress(file, expected):
         else:
             length = 2 + get_length(x, 7)
             extra = struct_le16.unpack(file.read(2))[0]
-            distance = 16384 + ((x & 8) << 11) + (extra >> 2)
+            # BI's LZO1X omits the 16384 base term in M4 match offsets, so streams
+            # produced by their tools cannot be read with the standard formula.
+            # ODOL data needs bi_variant=True; PAA data keeps the standard form.
+            base = 0 if bi_variant else 16384
+            distance = base + ((x & 8) << 11) + (extra >> 2)
             state = extra & 3
-            if distance == 16384:
+            if distance == base:
                 if length != 3:
                     raise LZO_Error("Invalid End Of Stream (expected match length: 3, got: %s)" % length)
                 # End of Stream reached
