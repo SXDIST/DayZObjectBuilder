@@ -24,8 +24,35 @@ def op_report(operator, mode, message):
 def abspath(path):
     if not path.startswith("//"):
         return path
-    
+
     return os.path.abspath(bpy.path.abspath(path))
+
+
+# On Windows, paths longer than MAX_PATH (260 characters) cannot be opened with the regular API.
+# Deeply nested targets (eg. unpacked game asset trees) easily exceed this, especially once a
+# temporary ".<timestamp>.temp" suffix is appended during export. Prefixing an absolute path with
+# "\\?\" opts into the extended-length path syntax and lifts the limit. The prefix requires a
+# normalized absolute path with backslash separators and no "."/".." components. On non-Windows
+# platforms (and for paths that are already prefixed) the input is returned unchanged.
+def long_path(path):
+    if os.name != "nt":
+        return path
+
+    if path.startswith("\\\\?\\"):
+        return path
+
+    normalized = os.path.abspath(path)
+    if normalized.startswith("\\\\"):  # UNC path (\\server\share\...)
+        return "\\\\?\\UNC\\" + normalized[2:]
+
+    return "\\\\?\\" + normalized
+
+
+# Wrapper around the builtin open() that transparently handles Windows long paths. Use this instead
+# of open() for any file whose path is user-supplied or otherwise unbounded in length (import/export
+# targets, texture and material files, etc.).
+def open_long(path, mode="r", **kwargs):
+    return open(long_path(path), mode, **kwargs)
 
 
 def is_valid_idx(index, subscriptable):
@@ -221,9 +248,9 @@ def load_common_data(scene):
     builtin = data.common_data
     json_data = {}
     try:
-        with open(custom_path) as file:
+        with open_long(custom_path, encoding="utf-8") as file:
             json_data = json.load(file)
-    except:
+    except (OSError, ValueError):
         pass
 
     common = {key: {**builtin[key], **json_data.get(key, {})} for key in builtin}
@@ -252,7 +279,7 @@ class ExportFileHandler():
         self.preserve_faulty = addon_pref.preserve_faulty_output
 
     def __enter__(self):
-        file = open(self.temppath, self.mode)
+        file = open(long_path(self.temppath), self.mode)
         self.file = file
 
         return file
@@ -261,17 +288,19 @@ class ExportFileHandler():
         self.file.close()
 
         if exc_type is None:
-            if os.path.isfile(self.filepath) and self.backup_old:
+            if os.path.isfile(long_path(self.filepath)) and self.backup_old:
                 self.force_rename(self.filepath, self.filepath + ".bak")
 
             self.force_rename(self.temppath, self.filepath)
-        
+
         elif not self.preserve_faulty:
-            os.remove(self.temppath)
-    
+            os.remove(long_path(self.temppath))
+
     @staticmethod
     def force_rename(old, new):
+        old = long_path(old)
+        new = long_path(new)
         if os.path.isfile(new):
             os.remove(new)
-        
+
         os.rename(old, new)

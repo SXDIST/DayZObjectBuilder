@@ -401,7 +401,7 @@ def load_live_preview(context, proxy_object):
     if active and active.get(legacy_proxy_preview_prop):
         active = None
 
-    with open(filepath, "rb") as file:
+    with utils.open_long(filepath, "rb") as file:
         lod_objects = import_p3d.read_file(settings, context, file)
 
     if len(lod_objects) == 0:
@@ -628,7 +628,7 @@ class A3OB_OT_proxy_extract(bpy.types.Operator):
             self.filepath = utils.abspath(proxy_object.a3ob_properties_object_proxy.proxy_path)
 
             try:
-                with open(self.filepath, "rb") as file:
+                with utils.open_long(self.filepath, "rb") as file:
                     matrix_world = proxy_object.matrix_world.copy()
                     lod_objects = import_p3d.read_file(self, context, file)
                     imported_object = lod_objects[0]
