@@ -17,6 +17,12 @@ def clear_components(obj):
 
 
 def find_components(obj):
+    # force_mode_object() drives bpy.ops.object.mode_set, which polls the active object. During
+    # export the LOD object is a fresh duplicate that was never made active (see duplicate_object),
+    # so without this the operator fails with "Context missing active object". The object is always
+    # in the active view layer here (interactive: it is the active object; export: the temp
+    # collection is linked to the scene), mirroring how component_convex_hull sets the active object.
+    bpy.context.view_layer.objects.active = obj
     utils.force_mode_object()
     
     clear_components(obj)
