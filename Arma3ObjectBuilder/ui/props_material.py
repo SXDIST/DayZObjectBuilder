@@ -1,6 +1,50 @@
+import os
+
 import bpy
 
 from ..utilities import generic as utils
+from ..utilities import materials as matutils
+from ..utilities import texsearch
+
+
+class A3OB_OT_material_autosearch(bpy.types.Operator):
+    """Auto-search the texture and RVMAT for the active material from its Base Color image"""
+
+    bl_label = "Auto Search Texture"
+    bl_idname = "a3ob.material_autosearch"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    @classmethod
+    def poll(cls, context):
+        return hasattr(context, "material") and context.material
+
+    def execute(self, context):
+        scene_props = context.scene.a3ob_materials
+        root = utils.abspath(scene_props.mod_root)
+
+        if not root or not os.path.isdir(root):
+            self.report({'ERROR'}, "Set a valid Mod Root in the Materials panel first")
+            return {'CANCELLED'}
+
+        index = texsearch.get_index(root, scene_props.search_source_textures)
+        result = matutils.search_and_apply(context.material, index, overwrite=True)
+
+        if result is None:
+            self.report({'WARNING'}, "Material has no Base Color image to search by")
+            return {'CANCELLED'}
+
+        if result.status == 'FOUND':
+            msg = "Found texture and RVMAT"
+            if result.ambiguous:
+                msg += " (multiple RVMATs matched, picked best)"
+            self.report({'INFO'}, msg)
+        elif result.status == 'PARTIAL':
+            found = "texture" if result.texture_path else "RVMAT"
+            self.report({'WARNING'}, "Only found %s" % found)
+        else:
+            self.report({'WARNING'}, "No matching texture or RVMAT found")
+
+        return {'FINISHED'}
 
 
 class A3OB_OT_paste_common_material(bpy.types.Operator):
@@ -102,7 +146,9 @@ class A3OB_PT_material(bpy.types.Panel):
         
         texture_type = material_props.texture_type
         if texture_type == 'TEX':
-            layout.prop(material_props, "texture_path", text="", icon='TEXTURE')
+            row_texture = layout.row(align=True)
+            row_texture.operator("a3ob.material_autosearch", text="", icon='VIEWZOOM')
+            row_texture.prop(material_props, "texture_path", text="", icon='TEXTURE')
         elif texture_type == 'COLOR':
             row_color = layout.row(align=True)
             row_color.prop(material_props, "color_value", icon='COLOR')
@@ -118,6 +164,7 @@ class A3OB_PT_material(bpy.types.Panel):
 
 
 classes = (
+    A3OB_OT_material_autosearch,
     A3OB_OT_paste_common_material,
     A3OB_OT_paste_common_procedural,
     A3OB_UL_common_procedurals,

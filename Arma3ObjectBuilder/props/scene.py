@@ -540,6 +540,20 @@ class A3OB_PG_materials(bpy.types.PropertyGroup):
         name = "Overwrite",
         description = "Overwrite the target RVMAT file if it already exists"
     )
+    # Texture auto-search
+    mod_root: bpy.props.StringProperty(
+        name = "Mod Root",
+        description = "Root directory of the project/mod to search for textures and RVMATs",
+        subtype = 'DIR_PATH'
+    )
+    search_source_textures: bpy.props.BoolProperty(
+        name = "Match Source Images",
+        description = "Also match source images (.png, .tga, .tif) when no .paa is found"
+    )
+    overwrite_existing_paths: bpy.props.BoolProperty(
+        name = "Overwrite Existing",
+        description = "Overwrite texture/material paths that are already set on a material (batch search)"
+    )
 
 
 classes = (

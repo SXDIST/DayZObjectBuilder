@@ -5,6 +5,77 @@ import bpy
 from .. import get_prefs, get_icon
 from ..utilities import generic as utils
 from ..utilities import materials as matutils
+from ..utilities import texsearch
+
+
+class A3OB_OT_material_autosearch_rebuild(bpy.types.Operator):
+    """Rebuild the cached texture/RVMAT index for the mod root"""
+
+    bl_idname = "a3ob.material_autosearch_rebuild"
+    bl_label = "Rebuild Index"
+    bl_options = {'REGISTER'}
+
+    @classmethod
+    def poll(cls, context):
+        return True
+
+    def execute(self, context):
+        scene_props = context.scene.a3ob_materials
+        root = utils.abspath(scene_props.mod_root)
+
+        if not root or not os.path.isdir(root):
+            self.report({'ERROR'}, "Set a valid Mod Root first")
+            return {'CANCELLED'}
+
+        index = texsearch.get_index(root, scene_props.search_source_textures, rebuild=True)
+        self.report({'INFO'}, "Indexed %d textures, %d RVMATs" % (len(index.paa_by_stem), len(index.rvmat_by_stem)))
+
+        return {'FINISHED'}
+
+
+class A3OB_OT_material_autosearch_batch(bpy.types.Operator):
+    """Auto-search textures and RVMATs for all materials of the selected objects"""
+
+    bl_idname = "a3ob.material_autosearch_batch"
+    bl_label = "Auto Search Selected"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    @classmethod
+    def poll(cls, context):
+        return len(context.selected_objects) > 0
+
+    def execute(self, context):
+        scene_props = context.scene.a3ob_materials
+        root = utils.abspath(scene_props.mod_root)
+
+        if not root or not os.path.isdir(root):
+            self.report({'ERROR'}, "Set a valid Mod Root first")
+            return {'CANCELLED'}
+
+        index = texsearch.get_index(root, scene_props.search_source_textures)
+        overwrite = scene_props.overwrite_existing_paths
+
+        materials = set()
+        for obj in context.selected_objects:
+            for slot in obj.material_slots:
+                if slot.material:
+                    materials.add(slot.material)
+
+        found = partial = missing = skipped = 0
+        for material in materials:
+            result = matutils.search_and_apply(material, index, overwrite)
+            if result is None:
+                skipped += 1
+            elif result.status == 'FOUND':
+                found += 1
+            elif result.status == 'PARTIAL':
+                partial += 1
+            else:
+                missing += 1
+
+        self.report({'INFO'}, "Filled: %d, partial: %d, not found: %d, no image: %d" % (found, partial, missing, skipped))
+
+        return {'FINISHED'}
 
 
 class A3OB_OT_materials_templates_generate(bpy.types.Operator):
@@ -160,13 +231,38 @@ class A3OB_PT_materials_templates(bpy.types.Panel):
         layout.operator("a3ob.materials_templates_generate", icon='EXPORT')
 
 
+class A3OB_PT_materials_autosearch(bpy.types.Panel):
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = "Object Builder"
+    bl_label = "Texture Auto-Search"
+    bl_parent_id = "A3OB_PT_materials"
+    bl_options = {'DEFAULT_CLOSED'}
+
+    def draw(self, context):
+        layout = self.layout
+        scene_props = context.scene.a3ob_materials
+
+        row_root = layout.row(align=True)
+        row_root.prop(scene_props, "mod_root")
+        row_root.operator("a3ob.material_autosearch_rebuild", text="", icon_value=get_icon("op_refresh"))
+
+        layout.prop(scene_props, "search_source_textures")
+        layout.prop(scene_props, "overwrite_existing_paths")
+
+        layout.operator("a3ob.material_autosearch_batch", icon='VIEWZOOM')
+
+
 classes = (
+    A3OB_OT_material_autosearch_rebuild,
+    A3OB_OT_material_autosearch_batch,
     A3OB_OT_materials_templates_generate,
     A3OB_OT_materials_templates_reload,
     A3OB_UL_materials_templates,
     A3OB_PT_materials,
     A3OB_PT_materials_colors,
-    A3OB_PT_materials_templates
+    A3OB_PT_materials_templates,
+    A3OB_PT_materials_autosearch
 )
 
 
