@@ -1,7 +1,7 @@
 #   ---------------------------------------- HEADER ----------------------------------------
 #   
 #   Author: MrClock
-#   Add-on: Arma 3 Object Builder
+#   Add-on: DayZ Object Builder
 #   
 #   Description:
 #       The script batch imports RTM files from a given folder, with the given settings, and
@@ -51,11 +51,11 @@ import bpy
 
 name = None
 for addon in bpy.context.preferences.addons:
-    if addon.module.endswith("Arma3ObjectBuilder"):
+    if addon.module.endswith("DZObjectBuilder"):
         name = addon.module
         break
 else:
-    raise Exception("Arma 3 Object Builder could not be found")
+    raise Exception("DayZ Object Builder could not be found")
 
 a3ob = importlib.import_module(name)
 import_file = a3ob.io.import_rtm.import_file

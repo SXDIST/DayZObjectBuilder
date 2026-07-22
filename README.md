@@ -1,6 +1,8 @@
-# Arma 3 Object Builder
+# DayZ Object Builder
 
 ## About the project
+
+**DayZ Object Builder** (**DZOB**) is a fork of [**Arma 3 Object Builder**](https://github.com/MrClock8163/Arma3ObjectBuilder) by MrClock, focused on **DayZ** content development. Because **DayZ** and **Arma 3** share the P3D, RVMAT and RTM formats, the add-on remains usable for both.
 
 **Arma 3 Object Builder** borrows its name from the infamous **Object Builder** application that's used for importing models to the P3D model format of **Arma 3**.
 While **Object Builder** bares some modelling functionality, it's by no means adequate by today's standards.
@@ -37,7 +39,7 @@ The range of **Blender** releases tested for compatibility is indicated in the c
 
 ## License
 
-As inherited from the **ArmAToolbox**, the **Arma 3 Object Builder** add-on is released under the GNU General Public License version 3.
+As inherited from the **ArmAToolbox** and **Arma 3 Object Builder**, the **DayZ Object Builder** add-on is released under the GNU General Public License version 3.
 
 This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR  PARTICULAR PURPOSE. See the GNU General Public License for more details.
 

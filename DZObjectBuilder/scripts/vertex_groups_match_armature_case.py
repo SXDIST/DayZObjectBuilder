@@ -1,7 +1,7 @@
 #   ---------------------------------------- HEADER ----------------------------------------
 #   
 #   Author: MrClock
-#   Add-on: Arma 3 Object Builder
+#   Add-on: DayZ Object Builder
 #   
 #   Description:
 #       The script matches the casing of vertex group names in the selected mesh objects, to the 

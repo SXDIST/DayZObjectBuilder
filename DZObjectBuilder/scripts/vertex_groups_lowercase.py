@@ -1,7 +1,7 @@
 #   ---------------------------------------- HEADER ----------------------------------------
 #   
 #   Author: MrClock
-#   Add-on: Arma 3 Object Builder
+#   Add-on: DayZ Object Builder
 #   
 #   Description:
 #       The script turns the names of vertex groups defined in the selected objects to lowercase.

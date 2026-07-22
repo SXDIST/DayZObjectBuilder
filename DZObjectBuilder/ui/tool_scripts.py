@@ -70,7 +70,7 @@ class A3OB_MT_scripts_misc(bpy.types.Menu):
 
 
 class A3OB_MT_scripts(bpy.types.Menu):
-    """Utility scripts from Arma 3 Object Builder"""
+    """Utility scripts from DayZ Object Builder"""
 
     bl_label = "Scripts"
 

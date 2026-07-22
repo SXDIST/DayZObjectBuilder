@@ -1,13 +1,13 @@
 schema_version = "1.0.0"
 
-maintainer = "MrClock"
+maintainer = "SXDIST"
 type = "add-on"
-id = "Arma3ObjectBuilder"
-name = "Arma 3 Object Builder"
-tagline = "Comprehensive add-on for modding Arma 3"
+id = "DZObjectBuilder"
+name = "DayZ Object Builder"
+tagline = "Comprehensive add-on for modding DayZ and Arma"
 version = "2.5.1"
 blender_version_min = "4.2.0"
-website = "https://mrcmodding.gitbook.io/arma-3-object-builder/home"
+website = "https://github.com/SXDIST/DZObjectBuilder"
 tags = ["Import-Export", "Game Engine", "Object"]
 license = ["SPDX:GPL-3.0-or-later"]
 

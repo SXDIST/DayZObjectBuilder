@@ -21,7 +21,7 @@ import importlib.util
 # synthetic root (carrying `addon_dir`, which data.py reads via "from .. import")
 # and a "utilities" subpackage so the relative imports resolve.
 _ROOT = "a3ob_texsearch_test_root"
-_ADDON_DIR = os.path.join(os.getcwd(), "Arma3ObjectBuilder")
+_ADDON_DIR = os.path.join(os.getcwd(), "DZObjectBuilder")
 _UTIL_DIR = os.path.join(_ADDON_DIR, "utilities")
 
 

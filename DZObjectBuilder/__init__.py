@@ -1,13 +1,13 @@
 bl_info = {
-    "name": "Arma 3 Object Builder",
-    "description": "Collection of tools for editing Arma 3 content",
-    "author": "MrClock (present add-on), Hans-Joerg \"Alwarren\" Frieden (original ArmaToolbox add-on)",
+    "name": "DayZ Object Builder",
+    "description": "Collection of tools for editing DayZ and Arma content",
+    "author": "SXDIST (DZOB fork), MrClock (Arma 3 Object Builder add-on), Hans-Joerg \"Alwarren\" Frieden (original ArmaToolbox add-on)",
     "version": (2, 5, 1),
     "blender": (2, 90, 0),
     "location": "Object Builder panels",
     "warning": "Development",
     "doc_url": "https://mrcmodding.gitbook.io/arma-3-object-builder/home",
-    "tracker_url": "https://github.com/MrClock8163/Arma3ObjectBuilder/issues",
+    "tracker_url": "https://github.com/SXDIST/DZObjectBuilder/issues",
     "category": "Import-Export"
 }
 
@@ -395,7 +395,7 @@ def unregister_icons():
 def register():
     from bpy.utils import register_class
     
-    print("Registering Arma 3 Object Builder ( '" + __package__ + "' )")
+    print("Registering DayZ Object Builder ( '" + __package__ + "' )")
     
     for cls in classes:
         register_class(cls)
@@ -414,7 +414,7 @@ def register():
 def unregister():
     from bpy.utils import unregister_class
 
-    print("Unregistering Arma 3 Object Builder ( '" + __package__ + "' )")
+    print("Unregistering DayZ Object Builder ( '" + __package__ + "' )")
     
     unregister_icons()
     

@@ -1,6 +1,6 @@
-# Arma 3 Object Builder
+# DayZ Object Builder
 
-Arma 3 Object Builder is a free, community add-on for Blender to help content development for Arma 3. The add-on is based on the ideas of the [ArmAToolbox](https://github.com/AlwarrenSidh/ArmAToolbox) add-on developed by Alwarren, but exists as a completely different implementation of a similar workflow, with a great number improved and extended features.
+DayZ Object Builder (DZOB) is a free add-on for Blender to help content development for DayZ and Arma. It is a fork of [Arma 3 Object Builder](https://github.com/MrClock8163/Arma3ObjectBuilder) by MrClock, which in turn is based on the ideas of the [ArmAToolbox](https://github.com/AlwarrenSidh/ArmAToolbox) add-on developed by Alwarren.
 
 ## Main features
 
@@ -11,21 +11,26 @@ Arma 3 Object Builder is a free, community add-on for Blender to help content de
 - skeleton import-export (model.cfg)
 - object list import-export (for Terrain Builder)
 - armature reconstruction
+- texture set auto-search
 - various editing tools
 - utility functions and scripts
 
+## Differences from upstream
+
+- Windows long path (`MAX_PATH`) support throughout file I/O, for deeply nested unpacked asset trees
+- import/export operators report failures as errors instead of raising unhandled tracebacks
+- texture and RVMAT auto-search over a mod root, matching sets even when the normal map is named differently from the color map
+
 ## Documentation
 
-The documentation can be found on [GitBook](https://mrcmodding.gitbook.io/arma-3-object-builder/home). As the add-on changes, the documentation will be updated.
-
-A series of introductory videos is also in production, and can be found on [YouTube](https://youtube.com/playlist?list=PL1L8e_Shj5DErJinP8vtLTImQ5PY4K9IN&si=U_AGJSK5mSi6VrjG). Videos may or may not exist about every feature, and any particular video might end up outdated as the add-on is developed. The written documentation always takes precedence.
+The add-on keeps the operator, property and panel identifiers of the upstream project, so the upstream documentation on [GitBook](https://mrcmodding.gitbook.io/arma-3-object-builder/home) applies to DZOB as well. Features added in this fork are documented in this repository.
 
 ## Installation
 
 The add-on can be installed after either downloading a packaged release, or cloning the repository and manually packing it.
 For information about add-on installation, visit the official [Blender documentation](https://docs.blender.org/manual/en/latest/editors/preferences/addons.html) page about add-ons.
 
-For Blender 4.2 and higher, the add-on can also be installed from the official [Extensions repository](https://extensions.blender.org/add-ons/arma3objectbuilder).
+DZOB is not published on the Blender Extensions repository. It registers the same operator and property identifiers as Arma 3 Object Builder, so the two add-ons cannot be enabled at the same time.
 
 ## License
 

@@ -228,7 +228,7 @@ class A3OB_OT_redefine_vertex_group(bpy.types.Operator):
 
 
 class A3OB_OT_open_changelog(bpy.types.Operator):
-    """Open Arma 3 Object Builder add-on changelog"""
+    """Open DayZ Object Builder add-on changelog"""
 
     bl_label = "Open Changelog"
     bl_idname = "a3ob.open_changelog"
@@ -451,7 +451,7 @@ class A3OB_MT_object_builder_misc(bpy.types.Menu):
 
 
 class A3OB_MT_object_builder(bpy.types.Menu):
-    """Arma 3 Object Builder utility functions"""
+    """DayZ Object Builder utility functions"""
     
     bl_label = "Object Builder"
     
@@ -488,8 +488,8 @@ class A3OB_MT_help(bpy.types.Menu):
         layout.operator("wm.url_open", text="Documentation", icon='HELP').url = "https://mrcmodding.gitbook.io/arma-3-object-builder/home"
         layout.operator("wm.url_open", text="Quick Start Reference", icon='URL').url = "https://mrcmodding.gitbook.io/arma-3-object-builder/quick-start-reference"
         layout.separator()
-        layout.operator("wm.url_open", text="Releases", icon='URL').url = "https://github.com/MrClock8163/Arma3ObjectBuilder/releases"
-        layout.operator("wm.url_open", text="Issue Tracker", icon='URL').url = "https://github.com/MrClock8163/Arma3ObjectBuilder/issues"
+        layout.operator("wm.url_open", text="Releases", icon='URL').url = "https://github.com/SXDIST/DZObjectBuilder/releases"
+        layout.operator("wm.url_open", text="Issue Tracker", icon='URL').url = "https://github.com/SXDIST/DZObjectBuilder/issues"
         layout.operator("a3ob.open_changelog", text="Changelog", icon='TEXT')
 
 
