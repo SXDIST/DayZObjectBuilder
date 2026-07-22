@@ -259,7 +259,10 @@ def read_lod_table(file, model, count_lods, file_size):
         try:
             position = locate()
             starts, ends, permanent = read_table_at(file, position, count_lods, file_size, model.offset)
-        except (ODOL_Error, compression.LZO_Error, EOFError, ValueError, struct.error) as ex:
+        # A wrong candidate can walk skip_animations() straight off the end of a
+        # truncated file. IndexError included because compression.lzo1x_decompress
+        # signals EOF that way (file.read(1)[0]), not with EOFError.
+        except (ODOL_Error, compression.LZO_Error, EOFError, IndexError, ValueError, struct.error) as ex:
             failures.append("%s: %s" % (label, ex))
             continue
 
@@ -294,7 +297,16 @@ class ODOL_File():
         count_lods = read_count(file, file_size, "LOD")
         output.resolutions = list(binary.read_floats(file, count_lods))
 
-        skip_model_info(file, output.version, file_size)
+        # ModelInfo runs ahead of the candidate search in read_lod_table, so it is
+        # not covered by that loop's own exception handling. A truncated file can
+        # still end mid LZO stream in here (eg. inside skip_compressed_floats),
+        # where the decompressor's file.read(1)[0] raises IndexError, not EOFError.
+        # Every failure on malformed input has to leave ODOL_File.read as ODOL_Error.
+        try:
+            skip_model_info(file, output.version, file_size)
+        except (IndexError, EOFError, ValueError, struct.error, compression.LZO_Error) as ex:
+            raise ODOL_Error("Failed to read past ModelInfo: %s" % ex) from ex
+
         read_lod_table(file, output, count_lods, file_size)
 
         return output

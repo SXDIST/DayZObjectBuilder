@@ -200,6 +200,31 @@ class TestCompressedMassArray(unittest.TestCase):
         self.assertEqual(model.permanent, [False, False, True, True, True, True, True, True, True])
 
 
+class TestTruncatedFile(unittest.TestCase):
+    def test_truncated_mid_compressed_mass_array_raises_odol_error(self):
+        # ModelInfo's mass array is LZO compressed once it reaches 1024 bytes, and
+        # the decompressor signals end of file by doing file.read(1)[0], which
+        # raises IndexError rather than EOFError. skip_model_info runs before the
+        # candidate search in read_lod_table, so it has no exception handling of
+        # its own; a truncated file must still surface as ODOL_Error, not IndexError.
+        data = make_header().getvalue()
+        data += b"\x00" * 212           # index .. animated (fixed size fields)
+        data += b"\x00"                 # skeleton, empty name -> no bones to read
+        data += b"\x00"                 # map_type
+        data += struct.pack("<I", 300)  # mass array count: 300 * 4 = 1200 bytes, over
+                                         # the 1024 byte compression threshold
+        # No further bytes: the file ends before a single LZO opcode is available.
+
+        file = io.BytesIO(data)
+        try:
+            odol.ODOL_File.read(file)
+            self.fail("Expected ODOL_Error to be raised for a truncated file")
+        except odol.ODOL_Error:
+            pass
+        except Exception as ex:
+            self.fail("Expected ODOL_Error, got %s: %s" % (type(ex).__name__, ex))
+
+
 class TestMassArrayGuard(unittest.TestCase):
     def test_implausible_length_is_rejected(self):
         # A length read from the wrong position would otherwise be decompressed
@@ -214,5 +239,48 @@ class TestMassArrayGuard(unittest.TestCase):
         self.assertEqual(file.tell(), 20)
 
 
+# Everything above that does not depend on DRUM/HOUSE only proves the reader is
+# internally consistent with itself (make_model() restates the same field widths
+# the reader uses, so a change to both sides in the same wrong way would still
+# pass). These two are the only guarantees actually pinned against real DayZ
+# models, and both are gated on a private, non-repo corpus (Bohemia's data, never
+# to be committed here). A `-v` skip reason is easy to miss, so the exact
+# guarantees that did not run are also announced in a banner below, unconditionally.
+CORPUS_GUARANTEES = (
+    (DRUM, "TestHeader.test_lod_table_matches_measured_values (55galDrum.p3d) - "
+           "exact LOD start/end/permanent values pinned against a real model"),
+    (HOUSE, "TestCompressedMassArray.test_reads_past_a_compressed_mass_array (House_1W02_Blue.p3d) - "
+            "walking past a real LZO-compressed per-point mass array without desyncing the LOD table"),
+)
+
+
+def print_corpus_banner():
+    missing = [(path, guarantee) for path, guarantee in CORPUS_GUARANTEES if not os.path.isfile(path)]
+    if not missing:
+        return
+
+    width = 78
+    lines = [
+        "!" * width,
+        "!! CORPUS NOT AVAILABLE - THE FOLLOWING ODOL LAYOUT GUARANTEES WERE NOT",
+        "!! VERIFIED THIS RUN (skipped, not proven):",
+        "!" * width,
+    ]
+    for path, guarantee in missing:
+        lines.append("!!")
+        lines.append("!!  missing file: %s" % path)
+        lines.append("!!  not verified: %s" % guarantee)
+
+    lines.append("!" * width)
+    lines.append("!! These are Bohemia's game files and must NEVER be committed to this")
+    lines.append("!! GPL-3 repository. Point the DRUM/HOUSE paths at the top of tests/odol.py")
+    lines.append("!! at a local copy of the DayZ P3D corpus to actually verify the layout.")
+    lines.append("!" * width)
+
+    print("\n" + "\n".join(lines) + "\n", file = sys.stderr)
+
+
 if __name__ == "__main__":
-    unittest.main()
+    program = unittest.main(exit = False)
+    print_corpus_banner()
+    sys.exit(0 if program.result.wasSuccessful() else 1)
