@@ -1,3 +1,5 @@
+import traceback
+
 import bpy
 import bpy_extras
 
@@ -35,9 +37,14 @@ class A3OB_OP_import_paa(bpy.types.Operator,  bpy_extras.io_utils.ImportHelper):
         layout.prop(self, "color_space", expand=True)
     
     def execute(self, context):
-        with open(self.filepath, "rb") as file:
-            img, tex = import_paa.import_file(self, context, file)
-        
+        try:
+            with utils.open_long(self.filepath, "rb") as file:
+                img, tex = import_paa.import_file(self, context, file)
+        except Exception as ex:
+            traceback.print_exc()
+            utils.op_report(self, {'ERROR'}, "Import failed: %s (check the logs in the system console)" % ex)
+            return {'CANCELLED'}
+
         if img is not None:
             utils.op_report(self, {'INFO'}, "Texture successfully imported as %s" % img.name)
         else:

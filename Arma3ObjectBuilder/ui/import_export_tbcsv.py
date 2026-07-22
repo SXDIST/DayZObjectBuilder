@@ -1,3 +1,5 @@
+import traceback
+
 import bpy
 import bpy_extras
 
@@ -57,8 +59,13 @@ class A3OB_OP_import_tbcsv(bpy.types.Operator, bpy_extras.io_utils.ImportHelper)
         layout.prop(self, "coord_shift")
 
     def execute(self, context):
-        with open(self.filepath, "rt") as file:
-            count_read, count_found = import_tbcsv.read_file(self, context, file)
+        try:
+            with utils.open_long(self.filepath, "rt", encoding="utf-8") as file:
+                count_read, count_found = import_tbcsv.read_file(self, context, file)
+        except Exception as ex:
+            traceback.print_exc()
+            utils.op_report(self, {'ERROR'}, "Import failed: %s (check the logs in the system console)" % ex)
+            return {'CANCELLED'}
 
         if count_found > 0:
             utils.op_report(self, {'INFO'}, "Successfully imported %d/%d object positions (check the logs in the system console)" % (count_found, count_read))

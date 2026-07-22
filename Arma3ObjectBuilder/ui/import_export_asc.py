@@ -1,3 +1,5 @@
+import traceback
+
 import bpy
 import bpy_extras
 
@@ -33,11 +35,17 @@ class A3OB_OP_import_asc(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
     def draw(self, context):
         pass
     
-    def execute(self, context):        
-        with open(self.filepath) as file:
-            import_asc.read_file(self, context, file)
-            utils.op_report(self, {'INFO'}, "Successfully imported DTM")
-        
+    def execute(self, context):
+        try:
+            with utils.open_long(self.filepath, encoding="utf-8") as file:
+                import_asc.read_file(self, context, file)
+        except Exception as ex:
+            traceback.print_exc()
+            utils.op_report(self, {'ERROR'}, "Import failed: %s (check the logs in the system console)" % ex)
+            return {'CANCELLED'}
+
+        utils.op_report(self, {'INFO'}, "Successfully imported DTM")
+
         return {'FINISHED'}
 
 

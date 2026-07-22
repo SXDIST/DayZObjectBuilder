@@ -1,3 +1,5 @@
+import traceback
+
 import bpy
 import bpy_extras
 
@@ -258,9 +260,14 @@ class A3OB_OP_import_rtm(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
         return super().invoke(context, event)
     
     def execute(self, context):
-        with open(self.filepath, "rb") as file:
-            count_frames = import_rtm.import_file(self, context, file)
-        
+        try:
+            with utils.open_long(self.filepath, "rb") as file:
+                count_frames = import_rtm.import_file(self, context, file)
+        except Exception as ex:
+            traceback.print_exc()
+            utils.op_report(self, {'ERROR'}, "Import failed: %s (check the logs in the system console)" % ex)
+            return {'CANCELLED'}
+
         if count_frames > 0:
             utils.op_report(self, {'INFO'}, "Successfully imported %d frame(s)" % count_frames)
 

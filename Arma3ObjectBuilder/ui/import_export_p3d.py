@@ -1,3 +1,5 @@
+import traceback
+
 import bpy
 import bpy_extras
 
@@ -96,11 +98,17 @@ class A3OB_OP_import_p3d(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
     def draw(self, context):
         pass
     
-    def execute(self, context):        
-        with open(self.filepath, "rb") as file:
-            lod_objects = import_p3d.read_file(self, context, file)
-            utils.op_report(self, {'INFO'}, "Successfully imported %d LODs (check the logs in the system console)" % len(lod_objects))
-        
+    def execute(self, context):
+        try:
+            with utils.open_long(self.filepath, "rb") as file:
+                lod_objects = import_p3d.read_file(self, context, file)
+        except Exception as ex:
+            traceback.print_exc()
+            utils.op_report(self, {'ERROR'}, "Import failed: %s (check the logs in the system console)" % ex)
+            return {'CANCELLED'}
+
+        utils.op_report(self, {'INFO'}, "Successfully imported %d LODs (check the logs in the system console)" % len(lod_objects))
+
         return {'FINISHED'}
 
 
@@ -324,20 +332,25 @@ class A3OB_OP_export_p3d(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
         
         temp_collection = export_p3d.create_temp_collection(context)
 
-        with utils.ExportFileHandler(self.filepath, "wb") as file:
-            # The export needs to be put inside a try-catch block in order to do the temporary object cleanup.
-            try:
-                lod_count, exported_count = export_p3d.write_file(self, context, file, temp_collection)
+        try:
+            with utils.ExportFileHandler(self.filepath, "wb") as file:
+                # The export needs to be put inside a try-finally block in order to do the temporary object cleanup.
+                try:
+                    lod_count, exported_count = export_p3d.write_file(self, context, file, temp_collection)
 
-                if lod_count == exported_count:
-                    utils.op_report(self, {'INFO'}, "Successfully exported all %d LODs (check the logs in the system console)" % exported_count)
-                else:
-                    utils.op_report(self, {'WARNING'}, "Only exported %d/%d LODs (check the logs in the system console)" % (exported_count, lod_count))
+                    if lod_count == exported_count:
+                        utils.op_report(self, {'INFO'}, "Successfully exported all %d LODs (check the logs in the system console)" % exported_count)
+                    else:
+                        utils.op_report(self, {'WARNING'}, "Only exported %d/%d LODs (check the logs in the system console)" % (exported_count, lod_count))
 
-            finally:
-                if not get_prefs().preserve_preprocessed_lods:
-                    export_p3d.cleanup_temp_collection(temp_collection) 
-        
+                finally:
+                    if not get_prefs().preserve_preprocessed_lods:
+                        export_p3d.cleanup_temp_collection(temp_collection)
+        except Exception as ex:
+            traceback.print_exc()
+            utils.op_report(self, {'ERROR'}, "Export failed: %s (check the logs in the system console)" % ex)
+            return {'CANCELLED'}
+
         return {'FINISHED'}
 
 
