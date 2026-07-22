@@ -136,6 +136,48 @@ def skip_compressed_floats(file, file_size):
     compression.lzo1x_decompress(file, expected, True)
 
 
+# Below version 64, a compressed block carries no size prefix of its own, so a
+# truncated file can only be caught by the decompressor running off the end of
+# the stream. lzo1x_decompress signals that with IndexError (file.read(1)[0] on
+# an empty read), not EOFError, so both have to be converted here; this is the
+# only place callers (elsewhere in this module and in the LOD body reader added
+# in a later task) have to guard against.
+def read_compressed_array(file, element_size, count, bi_variant = True):
+    expected = element_size * count
+    if expected < COMPRESSION_LIMIT:
+        return file.read(expected)
+
+    try:
+        # lzo1x_decompress returns (bytes_consumed, output). The consumed count
+        # is derived from the file position, so the stream is already positioned
+        # after the block; the count is only informational here.
+        _, output = compression.lzo1x_decompress(file, expected, bi_variant)
+    except (IndexError, EOFError, ValueError, struct.error, compression.LZO_Error) as ex:
+        raise ODOL_Error("Failed to read compressed array: %s" % ex) from ex
+
+    return bytes(output)
+
+
+# A condensed array is count(u32) + defaultFill(bool) + data, where defaultFill
+# means a single value is stored and has to be repeated count times rather than
+# count values following individually.
+def read_condensed_array(file, element_size, bi_variant = True):
+    try:
+        count = binary.read_ulong(file)
+        default_fill = binary.read_bool(file)
+    except (IndexError, EOFError, struct.error) as ex:
+        raise ODOL_Error("Failed to read condensed array header: %s" % ex) from ex
+
+    if default_fill:
+        value = file.read(element_size)
+        if len(value) < element_size:
+            raise ODOL_Error("Condensed array default value ran past the end of the file")
+
+        return value * count
+
+    return read_compressed_array(file, element_size, count, bi_variant)
+
+
 def skip_skeleton(file, version, file_size):
     name = binary.read_asciiz(file)
     if not name:

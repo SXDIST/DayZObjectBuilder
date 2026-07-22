@@ -239,6 +239,33 @@ class TestMassArrayGuard(unittest.TestCase):
         self.assertEqual(file.tell(), 20)
 
 
+class TestArrays(unittest.TestCase):
+    def test_short_array_is_raw(self):
+        payload = bytes(range(16))
+        stream = io.BytesIO(payload)
+        self.assertEqual(odol.read_compressed_array(stream, 1, 16), payload)
+
+    def test_condensed_default_fill_repeats_value(self):
+        stream = io.BytesIO(struct.pack("<I", 4) + b"\x01" + b"\x07\x00\x00\x00")
+        self.assertEqual(odol.read_condensed_array(stream, 4), b"\x07\x00\x00\x00" * 4)
+
+    def test_truncated_compressed_array_raises_odol_error(self):
+        # 1024 bytes is exactly the LZO threshold, so this goes through the
+        # decompressor, which hits EOF via file.read(1)[0] -> IndexError, not
+        # EOFError. That has to surface as ODOL_Error, same as everywhere else
+        # a compressed block is read in this module.
+        stream = io.BytesIO(b"")
+        with self.assertRaises(odol.ODOL_Error):
+            odol.read_compressed_array(stream, 1, 1024)
+
+    def test_condensed_array_falls_through_to_compressed(self):
+        # defaultFill = 0 means the real data follows in the same encoding
+        # read_compressed_array uses, so a short (raw) array round-trips.
+        payload = bytes(range(8))
+        stream = io.BytesIO(struct.pack("<I", 8) + b"\x00" + payload)
+        self.assertEqual(odol.read_condensed_array(stream, 1), payload)
+
+
 # Everything above that does not depend on DRUM/HOUSE only proves the reader is
 # internally consistent with itself (make_model() restates the same field widths
 # the reader uses, so a change to both sides in the same wrong way would still
