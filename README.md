@@ -26,7 +26,7 @@ It is a fork of [**Arma 3 Object Builder**](https://github.com/MrClock8163/Arma3
 ## Requirements and Compatibility
 
 - [**Blender** v2.90.0](https://www.blender.org/download/releases/2-90/) or higher
-- [**DayZ Tools**](https://store.steampowered.com/app/830640/DayZ_Tools/) or [**Arma 3 Tools**](https://store.steampowered.com/app/233800/Arma_3_Tools/) (optional, required for some features)
+- [**DayZ Tools**](https://store.steampowered.com/app/830640/DayZ_Tools/) (optional, required for some features)
 
 The add-on is developed on **Blender** v2.90.0, which has the side effect that it supports older releases and not just the latest ones. It is tested on newer releases regardless. If a future **Blender** release makes it impossible to stay compatible with both, support for legacy versions will be dropped in favour of the new API.
 
