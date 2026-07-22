@@ -121,7 +121,7 @@ def main():
 
         unknown_bones = [bone for bone in rtm_data.bones if bone.lower() not in known_bones]
         if Settings.skip_on_missing_bone and len(unknown_bones) > 0:
-            logger.step("Skipping - uknown bones: %s - path: %s" % (str(unknown_bones), path_in))
+            logger.step("Skipping - unknown bones: %s - path: %s" % (str(unknown_bones), path_in))
             continue
         
         rtm_data_plain = rtm_data.as_rtm(skeleton)
