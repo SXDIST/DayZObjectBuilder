@@ -3,9 +3,11 @@
 *.zip
 test/
 
-# Local working documents (design specs, implementation plans).
-# Kept on disk while working, never part of the add-on or its history.
+# Local working documents (design specs, implementation plans) and the
+# execution scratch that goes with them. Kept on disk while working, never
+# part of the add-on or its history.
 docs/superpowers/
+.superpowers/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
