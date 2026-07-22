@@ -17,6 +17,10 @@ if "data" in locals():
         reload(renaming)
     if "generic" in locals():
         reload(generic)
+    if "texsearch" in locals():
+        reload(texsearch)
+    if "materials" in locals():
+        reload(materials)
     if "validator" in locals():
         reload(validator)
     if "flags" in locals():
@@ -42,6 +46,8 @@ from . import colors
 from . import proxy
 from . import renaming
 from . import generic
+from . import texsearch
+from . import materials
 from . import validator
 from . import flags
 from . import lod
