@@ -1,15 +1,25 @@
 import io
 import os
 import sys
+import random
 import struct
 import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from _addon import load_io
 
-odol = load_io("data_p3d_odol")
+odol, compression = load_io("data_p3d_odol", "compression")
 
 DRUM = r"P:\DZ\gear\containers\55galDrum.p3d"
+
+# One of the few models whose vertex array decodes differently under the two LZO1X
+# variants, which makes it the only kind of file that can settle which one ODOL uses.
+RAIL = r"P:\DZ\structures\rail\Tracks\Rail_Track_Passing_25_nolc.p3d"
+
+# Hints 63964 vertices and still stores two byte face indices, which pins the index
+# width threshold at 65535 rather than 32767. At 32767 this model's every visual LOD
+# fails to parse.
+HANGAR = r"P:\DZ\structures_sakhal\military\tisy\proxy\Tisy_BigHangar_A_Grass_R.p3d"
 
 # The drum's geometry LOD carries no per point mass array. This one does, and it is
 # large enough to be LZO compressed, which is the only way to cover that branch.
@@ -247,7 +257,15 @@ class TestArrays(unittest.TestCase):
 
     def test_condensed_default_fill_repeats_value(self):
         stream = io.BytesIO(struct.pack("<I", 4) + b"\x01" + b"\x07\x00\x00\x00")
-        self.assertEqual(odol.read_condensed_array(stream, 4), b"\x07\x00\x00\x00" * 4)
+        self.assertEqual(odol.read_condensed_array(stream, 4, 4096), b"\x07\x00\x00\x00" * 4)
+
+    def test_condensed_implausible_count_is_rejected(self):
+        # defaultFill builds count elements out of a single stored value, so an
+        # unbounded count turns four bytes of input into a multi-gigabyte allocation.
+        # It has to be bounded by the file size like every other count in the module.
+        stream = io.BytesIO(struct.pack("<I", 2 ** 31) + b"\x01" + b"\x07\x00\x00\x00")
+        with self.assertRaises(odol.ODOL_Error):
+            odol.read_condensed_array(stream, 4, 4096)
 
     def test_truncated_compressed_array_raises_odol_error(self):
         # 1024 bytes is exactly the LZO threshold, so this goes through the
@@ -263,7 +281,248 @@ class TestArrays(unittest.TestCase):
         # read_compressed_array uses, so a short (raw) array round-trips.
         payload = bytes(range(8))
         stream = io.BytesIO(struct.pack("<I", 8) + b"\x00" + payload)
-        self.assertEqual(odol.read_condensed_array(stream, 1), payload)
+        self.assertEqual(odol.read_condensed_array(stream, 1, 4096), payload)
+
+
+class TestLODIsolation(unittest.TestCase):
+    def test_unreadable_lod_bodies_are_collected_not_raised(self):
+        # make_model fills the LOD bodies with zeros, which is a valid walk right up
+        # to sizeOfRestData and then fails its end address check. A body that cannot
+        # be parsed must be recorded rather than lose the whole model.
+        file, _, _ = make_model(b"\x00")
+        model = odol.ODOL_File.read(file)
+
+        self.assertEqual(model.lods, [])
+        self.assertEqual([index for index, _ in model.failed_lods], list(range(COUNT_LODS)))
+        for _, reason in model.failed_lods:
+            self.assertIn("LOD end", reason)
+
+
+@unittest.skipUnless(os.path.isfile(DRUM), "test corpus not available")
+class TestLODBody(unittest.TestCase):
+    def read_drum(self):
+        with open(DRUM, "rb") as file:
+            return odol.ODOL_File.read(file)
+
+    def test_every_lod_parses(self):
+        model = self.read_drum()
+        self.assertEqual(model.failed_lods, [])
+        self.assertEqual(len(model.lods), len(model.lod_starts))
+
+    def test_first_lod_has_consistent_geometry(self):
+        model = self.read_drum()
+        lod = model.lods[0]
+
+        self.assertGreater(len(lod.vertices), 0)
+        self.assertEqual(len(lod.uvs), len(lod.vertices))
+
+        for face in lod.faces:
+            self.assertIn(len(face), (3, 4))
+            for index in face:
+                self.assertLess(index, len(lod.vertices))
+
+    def test_first_lod_matches_measured_values(self):
+        # Pinned against the real model, so a layout change cannot pass by merely
+        # producing something self-consistent.
+        lod = self.read_drum().lods[0]
+
+        self.assertEqual(len(lod.vertices), 1810)
+        self.assertEqual(len(lod.normals), 1810)
+        self.assertEqual(len(lod.faces), 2580)
+        self.assertEqual(lod.textures, ["dz\\gear\\containers\\data\\barrel_green_co.paa"])
+        self.assertEqual(lod.materials, ["dz\\gear\\containers\\data\\barrel_green.rvmat"])
+        self.assertEqual(len(lod.sections), 3)
+        self.assertEqual(lod.properties.get("lodnoshadow"), "1")
+
+        # Sections partition the faces, in order and without gaps.
+        self.assertEqual(lod.sections[0].face_start, 0)
+        self.assertEqual(lod.sections[-1].face_end, len(lod.faces))
+        for previous, section in zip(lod.sections, lod.sections[1:]):
+            self.assertEqual(previous.face_end, section.face_start)
+
+        for section in lod.sections:
+            self.assertEqual(section.texture_index, 0)
+            self.assertEqual(section.material_index, 0)
+
+    def test_vertices_fill_the_declared_bounding_box(self):
+        # The decisive check on the whole decode chain, and the one that settles the
+        # LZO variant. bbox_min/max/center are plain floats read straight from the
+        # header; the vertices come out of an LZO stream. Requiring the decompressed
+        # cloud to fill exactly that box ties the two together: any decompression or
+        # framing error produces coordinates that cannot possibly land on it.
+        for lod in self.read_drum().lods:
+            if not lod.vertices:
+                continue
+
+            for axis in range(3):
+                low = min(vertex[axis] for vertex in lod.vertices)
+                high = max(vertex[axis] for vertex in lod.vertices)
+
+                self.assertAlmostEqual(low, lod.bbox_min[axis], places = 4)
+                self.assertAlmostEqual(high, lod.bbox_max[axis], places = 4)
+                self.assertAlmostEqual((low + high) / 2, lod.bbox_center[axis], places = 4)
+
+    def test_first_lod_is_drum_sized(self):
+        # Independent of the file's own header: the numbers have to be a 55 gallon
+        # drum, about 0.85 m tall and about 0.6 m across. Y is up in the ODOL frame.
+        lod = self.read_drum().lods[0]
+
+        height = max(v[1] for v in lod.vertices) - min(v[1] for v in lod.vertices)
+        diameter = max(v[2] for v in lod.vertices) - min(v[2] for v in lod.vertices)
+
+        self.assertAlmostEqual(height, 0.84, delta = 0.05)
+        self.assertAlmostEqual(diameter, 0.61, delta = 0.05)
+
+    def test_uvs_and_normals_are_well_formed(self):
+        lod = self.read_drum().lods[0]
+
+        for u, v in lod.uvs:
+            self.assertGreaterEqual(u, -0.01)
+            self.assertLessEqual(u, 1.01)
+            self.assertGreaterEqual(v, -0.01)
+            self.assertLessEqual(v, 1.01)
+
+        for normal in lod.normals:
+            length = sum(component ** 2 for component in normal) ** 0.5
+            self.assertAlmostEqual(length, 1.0, delta = 0.02)
+
+    def test_normals_point_outward(self):
+        # Unit length does not pin the decode: negating it, or reading X from the high
+        # bits, still yields unit vectors. Orientation is what distinguishes them, and
+        # a flipped normal is an inverted-shading bug that nothing else here catches.
+        # The drum's cylindrical wall has to face away from its own axis.
+        lod = self.read_drum().lods[0]
+        centre_x, _, centre_z = lod.bbox_center
+
+        outward = inward = 0
+        for vertex, normal in zip(lod.vertices, lod.normals):
+            radius_x, radius_z = vertex[0] - centre_x, vertex[2] - centre_z
+            radius = (radius_x ** 2 + radius_z ** 2) ** 0.5
+
+            # Only vertices clearly on the side wall, away from the lid and the base.
+            if radius < 0.25 or not 0.15 < vertex[1] < 0.7:
+                continue
+
+            projection = (normal[0] * radius_x + normal[2] * radius_z) / radius
+            if projection > 0.5:
+                outward += 1
+            elif projection < -0.5:
+                inward += 1
+
+        # The drum models its inner surface too, so this is a majority, not a sweep.
+        self.assertGreater(outward, 3 * inward)
+
+
+@unittest.skipUnless(os.path.isfile(RAIL), "test corpus not available")
+class TestLZOVariant(unittest.TestCase):
+    """Which LZO1X variant ODOL uses, pinned against a model that can tell them apart.
+
+    The variants differ only in the M4 match offset, so almost every block decodes
+    identically under both and proves nothing. This model is one of the few whose
+    vertex array actually differs, and the LOD's own uncompressed bbox_min/bbox_max
+    say which decode is the real geometry."""
+
+    def fill_error(self, lod):
+        worst = 0.0
+        for axis in range(3):
+            low = min(vertex[axis] for vertex in lod.vertices)
+            high = max(vertex[axis] for vertex in lod.vertices)
+            worst = max(worst, abs(low - lod.bbox_min[axis]), abs(high - lod.bbox_max[axis]))
+
+        return worst
+
+    def read_forcing(self, bi_variant):
+        original = compression.lzo1x_decompress
+        compression.lzo1x_decompress = lambda file, expected, _ = False: original(file, expected, bi_variant)
+        try:
+            with open(RAIL, "rb") as file:
+                return odol.ODOL_File.read(file)
+        finally:
+            compression.lzo1x_decompress = original
+
+    def test_module_uses_the_standard_variant(self):
+        self.assertFalse(odol.LZO_BI_VARIANT)
+
+    def test_standard_variant_reproduces_the_declared_bounding_box(self):
+        with open(RAIL, "rb") as file:
+            model = odol.ODOL_File.read(file)
+
+        self.assertLess(self.fill_error(model.lods[0]), 1e-3)
+
+    def test_bi_variant_does_not(self):
+        # The other half of the claim. Without this, a future change back to the BI
+        # variant would only break the test above with no explanation of why.
+        self.assertGreater(self.fill_error(self.read_forcing(True).lods[0]), 1.0)
+        self.assertLess(self.fill_error(self.read_forcing(False).lods[0]), 1e-3)
+
+    def test_normals_are_unit_length_only_under_the_standard_variant(self):
+        def worst_normal_error(model):
+            return max(abs(sum(c ** 2 for c in normal) ** 0.5 - 1.0) for normal in model.lods[0].normals)
+
+        self.assertLess(worst_normal_error(self.read_forcing(False)), 0.01)
+        self.assertGreater(worst_normal_error(self.read_forcing(True)), 0.05)
+
+
+@unittest.skipUnless(os.path.isfile(HANGAR), "test corpus not available")
+class TestFaceIndexWidth(unittest.TestCase):
+    def test_lod_between_the_two_thresholds_parses(self):
+        # Face indices widen at 65535 vertices, not at 32767. This LOD sits between
+        # the two, so the wrong threshold reads its face block at the wrong width and
+        # loses every visual LOD in the model.
+        with open(HANGAR, "rb") as file:
+            model = odol.ODOL_File.read(file)
+
+        self.assertEqual(model.failed_lods, [])
+
+        lod = model.lods[0]
+        self.assertGreater(len(lod.vertices), 32767)
+        self.assertLess(len(lod.vertices), 65536)
+        self.assertEqual(len(lod.faces), 15991)
+        for face in lod.faces:
+            self.assertIn(len(face), (3, 4))
+            for index in face:
+                self.assertLess(index, len(lod.vertices))
+
+
+@unittest.skipUnless(os.path.isfile(DRUM), "test corpus not available")
+class TestMalformedInput(unittest.TestCase):
+    def test_corrupted_models_only_ever_raise_odol_error(self):
+        # This runs inside Blender, where an IndexError, struct.error or MemoryError
+        # escaping the reader is an add-on crash rather than a rejected file. The
+        # decompressor in particular signals end of stream with IndexError, and the
+        # sequential LOD walk reaches struct.unpack with whatever bytes it is given.
+        with open(DRUM, "rb") as file:
+            original = file.read()
+
+        random.seed(3)
+        for trial in range(300):
+            data = bytearray(original)
+            if trial % 3 == 0:
+                data = data[:random.randrange(1, len(data))]
+            elif trial % 3 == 1:
+                for _ in range(random.randrange(1, 40)):
+                    data[random.randrange(len(data))] = random.randrange(256)
+            else:
+                at = random.randrange(len(data) - 4)
+                data[at:at + 4] = bytes(random.randrange(256) for _ in range(4))
+
+            try:
+                odol.ODOL_File.read(io.BytesIO(bytes(data)))
+            except odol.ODOL_Error:
+                pass
+            except Exception as ex:
+                self.fail("trial %d raised %s instead of ODOL_Error: %s" % (trial, type(ex).__name__, ex))
+
+
+class TestMaterialGuard(unittest.TestCase):
+    def test_unprintable_material_name_is_rejected(self):
+        # A desynchronised stream reads a material name out of arbitrary bytes. That
+        # has to fail rather than shift every following field in the LOD.
+        stream = io.BytesIO(b"\x01\x02\x03\x00" + struct.pack("<I", 20) + b"\x00" * 512)
+        with self.assertRaises(odol.ODOL_Error) as caught:
+            odol.read_material(stream)
+
+        self.assertIn("desynchronised", str(caught.exception))
 
 
 # Everything above that does not depend on DRUM/HOUSE only proves the reader is
@@ -278,6 +537,13 @@ CORPUS_GUARANTEES = (
            "exact LOD start/end/permanent values pinned against a real model"),
     (HOUSE, "TestCompressedMassArray.test_reads_past_a_compressed_mass_array (House_1W02_Blue.p3d) - "
             "walking past a real LZO-compressed per-point mass array without desyncing the LOD table"),
+    (DRUM, "TestLODBody (55galDrum.p3d) - the LOD body layout: geometry, UVs, faces, sections and "
+           "materials, checked by requiring the decoded vertex cloud to fill the LOD's declared bbox"),
+    (RAIL, "TestLZOVariant (Rail_Track_Passing_25_nolc.p3d) - which LZO1X variant ODOL uses. Almost "
+           "every block decodes identically under both; this is one of the few models that can "
+           "distinguish them, so without it the variant is assumed, not verified"),
+    (HANGAR, "TestFaceIndexWidth (Tisy_BigHangar_A_Grass_R.p3d) - that face indices widen at 65535 "
+             "vertices and not at 32767, which only a LOD sitting between the two can show"),
 )
 
 
@@ -300,7 +566,7 @@ def print_corpus_banner():
 
     lines.append("!" * width)
     lines.append("!! These are Bohemia's game files and must NEVER be committed to this")
-    lines.append("!! GPL-3 repository. Point the DRUM/HOUSE paths at the top of tests/odol.py")
+    lines.append("!! GPL-3 repository. Point the path constants at the top of tests/odol.py")
     lines.append("!! at a local copy of the DayZ P3D corpus to actually verify the layout.")
     lines.append("!" * width)
 

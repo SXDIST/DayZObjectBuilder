@@ -107,9 +107,12 @@ def lzo1x_decompress(file, expected, bi_variant = False):
         else:
             length = 2 + get_length(x, 7)
             extra = struct_le16.unpack(file.read(2))[0]
-            # BI's LZO1X omits the 16384 base term in M4 match offsets, so streams
-            # produced by their tools cannot be read with the standard formula.
-            # ODOL data needs bi_variant=True; PAA data keeps the standard form.
+            # BI's LZO1X is reported to omit the 16384 base term in M4 match offsets.
+            # Measured against the DayZ v54 ODOL corpus that claim does not hold: on
+            # every block where the two forms disagree, the standard one is the one
+            # that reproduces geometry matching the model's own declared bounding box
+            # (see LZO_BI_VARIANT in data_p3d_odol.py). Both ODOL and PAA therefore
+            # use the standard form here; the variant stays selectable, unused.
             base = 0 if bi_variant else 16384
             distance = base + ((x & 8) << 11) + (extra >> 2)
             state = extra & 3
