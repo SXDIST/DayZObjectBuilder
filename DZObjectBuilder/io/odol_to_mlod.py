@@ -156,6 +156,7 @@ def convert_lod(lod):
 # are collected on the result rather than raised.
 def convert(odol_file):
     output = p3d.P3D_MLOD()
+    output.version = odol_file.version
     output.failed_lods = []
 
     for lod in odol_file.lods:

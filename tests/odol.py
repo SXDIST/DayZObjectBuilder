@@ -4,6 +4,7 @@ import sys
 import random
 import struct
 import unittest
+import unittest.mock
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from _addon import load_io
@@ -739,6 +740,46 @@ class TestMalformedInput(unittest.TestCase):
                 pass
             except Exception as ex:
                 self.fail("trial %d raised %s instead of ODOL_Error: %s" % (trial, type(ex).__name__, ex))
+
+
+@unittest.skipUnless(os.path.isfile(DRUM), "test corpus not available")
+class TestNormalCountGuard(unittest.TestCase):
+    def test_normal_vertex_mismatch_raises(self):
+        # Mirrors the existing UV/vertex count guard: a LOD whose normal array is
+        # short of the vertex count must fail with ODOL_Error rather than silently
+        # produce normal indices that only go out of range later, in Blender's mesh
+        # builder. Hand building a whole well formed LOD body just to make its
+        # normal array one element short is a lot of scaffolding for no extra
+        # coverage, so this instead re-reads a real LOD body (55galDrum.p3d LOD 0)
+        # with read_condensed_array patched to shorten only the normals array - the
+        # third condensed array read in ODOL_LOD.read (clip flags, then the UV
+        # set's own condensed array, then normals) - by exactly one element.
+        with open(DRUM, "rb") as file:
+            model = odol.ODOL_File.read(file)
+
+        self.assertEqual(model.failed_lods, [])
+        self.assertTrue(model.lods)
+
+        start, end = model.lod_starts[0], model.lod_ends[0]
+        file_size = os.path.getsize(DRUM)
+
+        original = odol.read_condensed_array
+        calls = []
+
+        def shortened(file_obj, element_size, *args, **kwargs):
+            raw = original(file_obj, element_size, *args, **kwargs)
+            calls.append(raw)
+            if len(calls) == 3:  # 1st = clip flags, 2nd = UV set, 3rd = normals
+                raw = raw[:-element_size]
+            return raw
+
+        with open(DRUM, "rb") as file:
+            file.seek(start)
+            with unittest.mock.patch.object(odol, "read_condensed_array", side_effect = shortened):
+                with self.assertRaises(odol.ODOL_Error) as caught:
+                    odol.ODOL_LOD.read(file, model.version, end, file_size, model.bones)
+
+        self.assertIn("Normal count", str(caught.exception))
 
 
 class TestMaterialGuard(unittest.TestCase):

@@ -761,6 +761,9 @@ class ODOL_LOD():
         if output.vertices and len(output.uvs) != len(output.vertices):
             raise ODOL_Error("LOD has %d vertices but %d UV pairs" % (len(output.vertices), len(output.uvs)))
 
+        if output.vertices and len(output.normals) != len(output.vertices):
+            raise ODOL_Error("Normal count %d does not match vertex count %d" % (len(output.normals), len(output.vertices)))
+
         for face in output.faces:
             for index in face:
                 if index >= len(output.vertices):

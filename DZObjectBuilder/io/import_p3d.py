@@ -446,6 +446,9 @@ def read_file(operator, context, file):
             logger.step("LOD %d could not be read: %s" % (index, reason))
         for index, reason in mlod.failed_lods:
             logger.step("LOD %d could not be converted: %s" % (index, reason))
+        for index, lod in enumerate(mlod.lods):
+            if not lod.verts:
+                logger.step("LOD %d converted with 0 vertices (empty object)" % index)
         if operator.first_lod_only:
             mlod.lods = mlod.lods[:1]
     logger.step("File reading done in %f sec" % (time.time() - time_read_start))
