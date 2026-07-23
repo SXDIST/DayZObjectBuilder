@@ -15,6 +15,9 @@
 - renamed the add-on's operator and class identifiers from the `A3OB` / `a3ob.` namespace to `DZOB` / `dzob.`
   - the `.blend` custom-property identifiers (`a3ob_*` on objects, materials and the scene) are intentionally kept unchanged, so existing files keep their model metadata
 - user-facing labels, tooltips and descriptions rebranded from Arma to DayZ (upstream attribution and documentation links are retained)
+- external tools integration retargeted from Arma 3 Tools to DayZ Tools:
+  - the path preference is now "DayZ Tools", with a "Find DayZ Tools" operator that reads the install directory from the DayZ Tools registry key
+  - the binarized model.cfg fallback now invokes DayZ Tools' `Bin/CfgConvert/CfgConvert.exe`
 
 ### Removed
 

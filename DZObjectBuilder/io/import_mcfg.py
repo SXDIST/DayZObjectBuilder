@@ -33,21 +33,21 @@ class Bone():
 
 
 def get_cfg_convert():
-    return os.path.join(get_prefs().a3_tools, "cfgconvert/cfgconvert.exe")
+    return os.path.join(get_prefs().dayz_tools, "Bin", "CfgConvert", "CfgConvert.exe")
 
 
 # Binary reading is far more reliable, and less messy than trying to
-# parse either the raw config syntax, or the XML output of cfgconvert.
-# It can be used as a fallback option on systems where and Arma 3 Tools are installed.
+# parse either the raw config syntax, or the XML output of CfgConvert.
+# It can be used as a fallback option on systems where DayZ Tools are installed.
 def cfgconvert(filepath, exepath):
     current_dir = os.getcwd()
-    
+
     if os.path.exists("P:\\"):
         os.chdir("P:\\")
-    
+
     destfile = tempfile.NamedTemporaryFile(mode="w+b", prefix="mcfg_", delete=False)
     destfile.close()
-    
+
     try:
         results = subprocess.run([exepath, "-bin", "-dst", destfile.name, filepath], capture_output=True)
         results.check_returncode()
@@ -55,9 +55,9 @@ def cfgconvert(filepath, exepath):
         os.chdir(current_dir)
         os.remove(destfile.name)
         return ""
-        
+
     os.chdir(current_dir)
-    
+
     return destfile.name
 
 
@@ -80,11 +80,11 @@ def read_mcfg(filepath, logger):
             return None
 
         temppath = cfgconvert(filepath, exepath)
-        
+
         if temppath == "":
             logger.step("Failed to rapify file")
             return None
-        
+
         data = config.derapify_file(temppath)
         os.remove(temppath)
         return data

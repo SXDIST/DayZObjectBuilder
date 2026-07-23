@@ -60,11 +60,11 @@ def outliner_enable_update(self, context):
         context.scene.a3ob_outliner.clear()
 
 
-class A3OB_OT_prefs_find_a3_tools(bpy.types.Operator):
-    """Find the Arma 3 Tools installation through the Windows registry"""
+class DZOB_OT_prefs_find_dayz_tools(bpy.types.Operator):
+    """Find the DayZ Tools installation through the Windows registry"""
 
-    bl_idname = "a3ob.prefs_find_a3_tools"
-    bl_label = "Find Arma 3 Tools"
+    bl_idname = "dzob.prefs_find_dayz_tools"
+    bl_label = "Find DayZ Tools"
     bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
@@ -74,12 +74,12 @@ class A3OB_OT_prefs_find_a3_tools(bpy.types.Operator):
     def execute(self, context):
         try:
             from winreg import OpenKey, QueryValueEx, HKEY_CURRENT_USER
-            key = OpenKey(HKEY_CURRENT_USER, r"software\bohemia interactive\arma 3 tools")
+            key = OpenKey(HKEY_CURRENT_USER, r"software\bohemia interactive\dayz tools")
             value, _type = QueryValueEx(key, "path")
-            addon_prefs.a3_tools = value
+            addon_prefs.dayz_tools = value
 
         except Exception:
-            self.report({'ERROR'}, "The Arma 3 Tools installation could not be found, it has to be set manually")
+            self.report({'ERROR'}, "The DayZ Tools installation could not be found, it has to be set manually")
 
         return {'FINISHED'}
 
@@ -253,9 +253,9 @@ class DZOB_AT_preferences(bpy.types.AddonPreferences):
         update = outliner_enable_update
     )
     # Paths
-    a3_tools: bpy.props.StringProperty(
-        name = "Arma 3 Tools",
-        description = "Install directory of the official Arma 3 Tools",
+    dayz_tools: bpy.props.StringProperty(
+        name = "DayZ Tools",
+        description = "Install directory of the official DayZ Tools",
         subtype = 'DIR_PATH'
     )
     project_root: bpy.props.StringProperty(
@@ -313,9 +313,9 @@ class DZOB_AT_preferences(bpy.types.AddonPreferences):
             row_outliner.prop(self, "outliner", expand=True)
             
         elif self.tabs == 'PATHS':
-            row_a3_tools = box.row(align=True)
-            row_a3_tools.prop(self, "a3_tools", icon='TOOL_SETTINGS')
-            row_a3_tools.operator("a3ob.prefs_find_a3_tools", text="", icon='VIEWZOOM')
+            row_dayz_tools = box.row(align=True)
+            row_dayz_tools.prop(self, "dayz_tools", icon='TOOL_SETTINGS')
+            row_dayz_tools.operator("dzob.prefs_find_dayz_tools", text="", icon='VIEWZOOM')
             box.prop(self, "project_root", icon='DISK_DRIVE')
             box.prop(self, "custom_data", icon='PRESET')
         
@@ -334,7 +334,7 @@ class DZOB_AT_preferences(bpy.types.AddonPreferences):
 
 
 classes = (
-    A3OB_OT_prefs_find_a3_tools,
+    DZOB_OT_prefs_find_dayz_tools,
     DZOB_OT_prefs_edit_flag_vertex,
     DZOB_OT_prefs_edit_flag_face,
     DZOB_AT_preferences
