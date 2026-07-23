@@ -11,6 +11,10 @@ name: Release add-on
 # Требуется секрет CLAUDE_CODE_OAUTH_TOKEN — токен из `claude setup-token`
 # (Settings -> Secrets and variables -> Actions).
 # Без него релиз всё равно выйдет — с авто-заметками GitHub.
+#
+# Дополнительно та же версия публикуется на extensions.blender.org через
+# официальный API. Требуется секрет BLENDER_EXTENSIONS_TOKEN и уже созданное
+# на платформе расширение. Без токена шаг просто пропускается.
 
 on:
   push:
@@ -153,4 +157,47 @@ jobs:
               --title "${{ steps.ver.outputs.tag }}" \
               --target "${{ github.sha }}" \
               --generate-notes
+          fi
+
+      # Публикация той же версии на extensions.blender.org через официальный
+      # API (тот же zip и те же заметки). Требует секрета
+      # BLENDER_EXTENSIONS_TOKEN (профиль на extensions.blender.org -> API tokens)
+      # и уже СУЩЕСТВУЮЩЕГО расширения на платформе (первую публикацию и
+      # прохождение ревью делают вручную — API только добавляет новые версии).
+      # Если токена нет или загрузка не удалась — GitHub-релиз уже создан,
+      # шаг лишь пишет warning и не роняет job.
+      - name: Publish to extensions.blender.org
+        if: steps.check.outputs.exists == 'false'
+        env:
+          BLENDER_EXTENSIONS_TOKEN: ${{ secrets.BLENDER_EXTENSIONS_TOKEN }}
+          # ID расширения на платформе (обычно совпадает с id из
+          # blender_manifest.toml). Поправь, если на extensions.blender.org
+          # у расширения другой идентификатор.
+          EXTENSION_ID: DZObjectBuilder
+        run: |
+          set -uo pipefail
+
+          if [ -z "${BLENDER_EXTENSIONS_TOKEN:-}" ]; then
+            echo "::warning::BLENDER_EXTENSIONS_TOKEN не задан — пропуск публикации на extensions.blender.org."
+            exit 0
+          fi
+
+          # Заметки: переиспользуем сгенерированные; иначе — простой текст.
+          if [ ! -s release-notes.md ]; then
+            printf 'Release %s\n' "${{ steps.ver.outputs.tag }}" > release-notes.md
+          fi
+
+          echo "Загрузка ${{ steps.build.outputs.asset }} на extensions.blender.org (extension: $EXTENSION_ID)…"
+          http=$(curl -sS -o blender-resp.json -w '%{http_code}' \
+            -X POST "https://extensions.blender.org/api/v1/extensions/${EXTENSION_ID}/versions/upload/" \
+            -H "Authorization: bearer ${BLENDER_EXTENSIONS_TOKEN}" \
+            -F "version_file=@${{ steps.build.outputs.asset }}" \
+            -F "release_notes=<release-notes.md") || http="000"
+
+          echo "Ответ платформы: HTTP $http"
+          if [ "$http" -ge 200 ] && [ "$http" -lt 300 ]; then
+            echo "Версия ${{ steps.ver.outputs.tag }} отправлена на extensions.blender.org."
+          else
+            echo "::warning::Публикация на extensions.blender.org не удалась (HTTP $http). GitHub-релиз уже создан."
+            sed 's/^/  blender: /' blender-resp.json 2>/dev/null || true
           fi
