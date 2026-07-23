@@ -20,6 +20,7 @@
     - native import of DayZ's Enfusion `.anm` animations (File > Import > DayZ animation, or drag-and-drop) onto the active armature, as an action — no external tool required
     - keyframes are matched to the armature's bones by name and applied through the DayZ bone-space fix, so a vanilla DayZ rig plays back correctly
     - note tracks are imported as pose markers; any existing action is preserved as an NLA strip
+- bundled DayZ character master rig, added to the scene via Add > DayZ Character Rig — a ready, animation-ready armature (with camera and helper gizmos) for retargeting animations and for testing garment weights against imported `.xob` bodies (MIT, credited in `DZObjectBuilder/data/CREDITS.md`)
 
 ### Changed
 

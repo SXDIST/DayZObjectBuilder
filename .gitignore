@@ -3,6 +3,10 @@
 *.zip
 test/
 
+# The bundled DayZ character master rig is part of the add-on and must be
+# tracked despite the *.blend* rule above (MIT, see DZObjectBuilder/data/CREDITS.md).
+!DZObjectBuilder/data/dayz_master_rig.blend
+
 # Local working documents (design specs, implementation plans) and the
 # execution scratch that goes with them. Kept on disk while working, never
 # part of the add-on or its history.

@@ -37,6 +37,8 @@ if "props_object_mesh" in locals():
         reload(tool_rigging)
     if "tool_scripts" in locals():
         reload(tool_scripts)
+    if "tool_character_rig" in locals():
+        reload(tool_character_rig)
     if "tool_utilities" in locals():
         reload(tool_utilities)
     if "tool_validation" in locals():
@@ -61,5 +63,6 @@ from . import tool_paths
 from . import tool_proxies
 from . import tool_rigging
 from . import tool_scripts
+from . import tool_character_rig
 from . import tool_utilities
 from . import tool_validation

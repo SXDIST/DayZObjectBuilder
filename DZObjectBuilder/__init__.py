@@ -364,7 +364,8 @@ modules = (
     ui.tool_validation,
     ui.tool_rigging,
     ui.tool_utilities,
-    ui.tool_scripts
+    ui.tool_scripts,
+    ui.tool_character_rig
 )
 
 
