@@ -3,6 +3,8 @@ if "data" in locals():
     
     if "data" in locals():
         reload(data)
+    if "dayz_naming" in locals():
+        reload(dayz_naming)
     if "logger" in locals():
         reload(logger)
     if "compat" in locals():
@@ -39,6 +41,7 @@ if "data" in locals():
 
 # In order of dependency
 from . import data
+from . import dayz_naming
 from . import logger
 from . import compat
 from . import clouds
