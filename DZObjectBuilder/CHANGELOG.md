@@ -22,6 +22,8 @@
   - proxies: vehicle crew (driver/cargo), weapon magazine and back-item (rifle/launcher/binoculars) proxies
   - penetration materials: the full vanilla DayZ set from `DZ\data\data\Penetration\`
   - Arma-only presets without a DayZ equivalent (weapon-slot proxies, misc materials) were dropped
+- rigging skeleton preset replaced: the Arma `OFP2_ManSkeleton` gave way to DayZ's `DayzTemporarySkeleton` (159 bones), used by the vanilla DayZ character/clothing models
+  - the "Add DayzTemporarySkeleton" rigging operator and the `dayz_skeleton.py` template script replace their OFP2 counterparts
 
 ### Removed
 

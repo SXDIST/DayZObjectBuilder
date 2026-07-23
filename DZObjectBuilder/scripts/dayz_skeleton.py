@@ -1,27 +1,19 @@
 #   ---------------------------------------- HEADER ----------------------------------------
-#   
+#
 #   Author: MrClock
 #   Add-on: DayZ Object Builder
-#   
+#
 #   Description:
-#       The script adds the OFP2_ManSkeleton to the skeleton list of the Rigging tool panel.
+#       The script adds the DayzTemporarySkeleton to the skeleton list of the Rigging tool panel.
 #
 #   Usage:
-#       1. set settings as necessary
-#       2. run script
-#   
+#       1. run script
+#
 #   ----------------------------------------------------------------------------------------
 
 
-#   --------------------------------------- SETTINGS ---------------------------------------
-
-class Settings:
-    # Turn all bone names to lowercase
-    force_lowercase = True
-
-
 #   ---------------------------------------- LOGIC -----------------------------------------
-    
+
 import importlib
 
 import bpy
@@ -41,13 +33,13 @@ data = a3ob.utilities.data
 def main():
     scene_props = bpy.context.scene.a3ob_rigging
     skeleton = scene_props.skeletons.add()
-    skeleton.name = "ofp2_manskeleton" if Settings.force_lowercase else "OFP2_ManSkeleton"
+    skeleton.name = "DayzTemporarySkeleton"
     skeleton.protected = True
 
-    for bone, parent in data.ofp2_manskeleton.items():
+    for bone, parent in data.dayz_temporary_skeleton.items():
         item = skeleton.bones.add()
-        item.name = bone.lower() if Settings.force_lowercase else bone
-        item.parent = parent.lower() if Settings.force_lowercase else parent
+        item.name = bone
+        item.parent = parent
 
 
 main()

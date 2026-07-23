@@ -351,24 +351,24 @@ class DZOB_OT_rigging_skeletons_bones_lowercase(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class DZOB_OT_rigging_skeletons_ofp2manskeleton(bpy.types.Operator):
-    """Add OFP2_ManSkeleton definition"""
-    
-    bl_idname = "dzob.rigging_skeletons_ofp2manskeleton"
-    bl_label = "Add OFP2_ManSkeleton"
+class DZOB_OT_rigging_skeletons_dayzskeleton(bpy.types.Operator):
+    """Add DayzTemporarySkeleton definition"""
+
+    bl_idname = "dzob.rigging_skeletons_dayzskeleton"
+    bl_label = "Add DayzTemporarySkeleton"
     bl_options = {'REGISTER', 'UNDO'}
-    
+
     @classmethod
     def poll(cls, context):
         return True
-    
+
     def execute(self, context):
         scene_props = context.scene.a3ob_rigging
         skeleton = scene_props.skeletons.add()
-        skeleton.name = "OFP2_ManSkeleton"
+        skeleton.name = "DayzTemporarySkeleton"
         skeleton.protected = True
 
-        for bone, parent in data.ofp2_manskeleton.items():
+        for bone, parent in data.dayz_temporary_skeleton.items():
             item = skeleton.bones.add()
             item.name = bone
             item.parent = parent
@@ -562,7 +562,7 @@ class DZOB_MT_rigging_skeletons(bpy.types.Menu):
 
         layout.operator("dzob.rigging_skeletons_from_armature", icon='OUTLINER_OB_ARMATURE')
         layout.separator()
-        layout.operator("dzob.rigging_skeletons_ofp2manskeleton", icon='ARMATURE_DATA')
+        layout.operator("dzob.rigging_skeletons_dayzskeleton", icon='ARMATURE_DATA')
         layout.separator()
         layout.operator("dzob.rigging_skeletons_validate", text="Validate", icon='VIEWZOOM')
         layout.separator()
@@ -676,7 +676,7 @@ classes = (
     DZOB_OT_rigging_skeletons_bones_move,
     DZOB_OT_rigging_skeletons_bones_clear,
     DZOB_OT_rigging_skeletons_bones_lowercase,
-    DZOB_OT_rigging_skeletons_ofp2manskeleton,
+    DZOB_OT_rigging_skeletons_dayzskeleton,
     DZOB_OT_rigging_pivots_from_armature,
     DZOB_OT_rigging_weights_select_unnormalized,
     DZOB_OT_rigging_weights_select_overdetermined,

@@ -12,7 +12,7 @@ scripts = {
     },
     "import": {
         "P3D batch": "import_p3d_batch.py",
-        "OFP2_ManSkeleton": "ofp2_manskeleton.py"
+        "DayzTemporarySkeleton": "dayz_skeleton.py"
     },
     "rvmat": {
         "PBR shader (VBS)": "pbr_vbs.rvmat_template",
