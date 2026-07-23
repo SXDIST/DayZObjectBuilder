@@ -18,6 +18,10 @@
 - external tools integration retargeted from Arma 3 Tools to DayZ Tools:
   - the path preference is now "DayZ Tools", with a "Find DayZ Tools" operator that reads the install directory from the DayZ Tools registry key
   - the binarized model.cfg fallback now invokes DayZ Tools' `Bin/CfgConvert/CfgConvert.exe`
+- built-in common data presets repointed from Arma 3 (`P:\a3\...`) to vanilla DayZ (`DZ\...`) content
+  - proxies: vehicle crew (driver/cargo), weapon magazine and back-item (rifle/launcher/binoculars) proxies
+  - penetration materials: the full vanilla DayZ set from `DZ\data\data\Penetration\`
+  - Arma-only presets without a DayZ equivalent (weapon-slot proxies, misc materials) were dropped
 
 ### Removed
 
