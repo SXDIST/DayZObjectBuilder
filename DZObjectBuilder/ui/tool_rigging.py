@@ -15,7 +15,7 @@ def get_skeleton(scene_props):
     return scene_props.skeletons[scene_props.skeletons_index]
 
 
-class A3OB_UL_rigging_skeletons(bpy.types.UIList):
+class DZOB_UL_rigging_skeletons(bpy.types.UIList):
     use_filter_sort_alpha: bpy.props.BoolProperty(
         name = "Sort By Name",
         description = "Sort items by their name"
@@ -52,7 +52,7 @@ class A3OB_UL_rigging_skeletons(bpy.types.UIList):
         return flt_flags, flt_neworder
 
 
-class A3OB_UL_rigging_skeletons_noedit(bpy.types.UIList):
+class DZOB_UL_rigging_skeletons_noedit(bpy.types.UIList):
     use_filter_sort_alpha: bpy.props.BoolProperty(
         name = "Sort By Name",
         description = "Sort items by their name"
@@ -84,7 +84,7 @@ class A3OB_UL_rigging_skeletons_noedit(bpy.types.UIList):
         return flt_flags, flt_neworder
 
 
-class A3OB_UL_rigging_bones(bpy.types.UIList):
+class DZOB_UL_rigging_bones(bpy.types.UIList):
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index, flt_flag):
         if not data.protected:
             layout.alignment = 'LEFT'
@@ -97,10 +97,10 @@ class A3OB_UL_rigging_bones(bpy.types.UIList):
             layout.label(text=item.name, icon='BONE_DATA')
 
 
-class A3OB_OT_rigging_skeletons_add(bpy.types.Operator):
+class DZOB_OT_rigging_skeletons_add(bpy.types.Operator):
     """Add new skeleton definition"""
 
-    bl_idname = "a3ob.rigging_skeletons_add"
+    bl_idname = "dzob.rigging_skeletons_add"
     bl_label = "Add Skeleton"
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -123,10 +123,10 @@ class A3OB_OT_rigging_skeletons_add(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_rigging_skeletons_remove(bpy.types.Operator):
+class DZOB_OT_rigging_skeletons_remove(bpy.types.Operator):
     """Remove skeleton definition"""
 
-    bl_idname = "a3ob.rigging_skeletons_remove"
+    bl_idname = "dzob.rigging_skeletons_remove"
     bl_label = "Remove Skeleton"
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -143,10 +143,10 @@ class A3OB_OT_rigging_skeletons_remove(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_rigging_skeletons_from_armature(bpy.types.Operator):
+class DZOB_OT_rigging_skeletons_from_armature(bpy.types.Operator):
     """Create skeleton definition from active armature object"""
 
-    bl_idname = "a3ob.rigging_skeletons_from_armature"
+    bl_idname = "dzob.rigging_skeletons_from_armature"
     bl_label = "Skeleton From Armature"
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -171,10 +171,10 @@ class A3OB_OT_rigging_skeletons_from_armature(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_rigging_skeletons_clear(bpy.types.Operator):
+class DZOB_OT_rigging_skeletons_clear(bpy.types.Operator):
     """Clear skeletons list"""
 
-    bl_idname = "a3ob.rigging_skeletons_clear"
+    bl_idname = "dzob.rigging_skeletons_clear"
     bl_label = "Clear Skeletons"
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -191,10 +191,10 @@ class A3OB_OT_rigging_skeletons_clear(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_rigging_skeletons_validate(bpy.types.Operator):
+class DZOB_OT_rigging_skeletons_validate(bpy.types.Operator):
     """Validate the active skeleton definition"""
 
-    bl_idname = "a3ob.rigging_skeletons_validate"
+    bl_idname = "dzob.rigging_skeletons_validate"
     bl_label = "Validate Skeleton"
     bl_options = {'REGISTER'}
 
@@ -217,10 +217,10 @@ class A3OB_OT_rigging_skeletons_validate(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_rigging_skeletons_bones_add(bpy.types.Operator):
+class DZOB_OT_rigging_skeletons_bones_add(bpy.types.Operator):
     """Add new bone to skeleton definition"""
 
-    bl_idname = "a3ob.rigging_skeletons_bones_add"
+    bl_idname = "dzob.rigging_skeletons_bones_add"
     bl_label = "Add Bone"
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -246,10 +246,10 @@ class A3OB_OT_rigging_skeletons_bones_add(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_rigging_skeletons_bones_remove(bpy.types.Operator):
+class DZOB_OT_rigging_skeletons_bones_remove(bpy.types.Operator):
     """Remove bone from skeleton definition"""
 
-    bl_idname = "a3ob.rigging_skeletons_bones_remove"
+    bl_idname = "dzob.rigging_skeletons_bones_remove"
     bl_label = "Remove Bone"
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -269,10 +269,10 @@ class A3OB_OT_rigging_skeletons_bones_remove(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_rigging_skeletons_bones_move(bpy.types.Operator):
+class DZOB_OT_rigging_skeletons_bones_move(bpy.types.Operator):
     """Move Bone"""
     
-    bl_idname = "a3ob.rigging_skeletons_bones_move"
+    bl_idname = "dzob.rigging_skeletons_bones_move"
     bl_label = "Move Bone"
     bl_options = {'REGISTER'}
 
@@ -303,10 +303,10 @@ class A3OB_OT_rigging_skeletons_bones_move(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_rigging_skeletons_bones_clear(bpy.types.Operator):
+class DZOB_OT_rigging_skeletons_bones_clear(bpy.types.Operator):
     """Clear bones from skeleton definition"""
 
-    bl_idname = "a3ob.rigging_skeletons_bones_clear"
+    bl_idname = "dzob.rigging_skeletons_bones_clear"
     bl_label = "Clear Bones"
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -326,10 +326,10 @@ class A3OB_OT_rigging_skeletons_bones_clear(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_rigging_skeletons_bones_lowercase(bpy.types.Operator):
+class DZOB_OT_rigging_skeletons_bones_lowercase(bpy.types.Operator):
     """Make all bone names lowercase"""
 
-    bl_idname = "a3ob.rigging_skeletons_bones_lowercase"
+    bl_idname = "dzob.rigging_skeletons_bones_lowercase"
     bl_label = "Make Lowercase"
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -351,10 +351,10 @@ class A3OB_OT_rigging_skeletons_bones_lowercase(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_rigging_skeletons_ofp2manskeleton(bpy.types.Operator):
+class DZOB_OT_rigging_skeletons_ofp2manskeleton(bpy.types.Operator):
     """Add OFP2_ManSkeleton definition"""
     
-    bl_idname = "a3ob.rigging_skeletons_ofp2manskeleton"
+    bl_idname = "dzob.rigging_skeletons_ofp2manskeleton"
     bl_label = "Add OFP2_ManSkeleton"
     bl_options = {'REGISTER', 'UNDO'}
     
@@ -376,10 +376,10 @@ class A3OB_OT_rigging_skeletons_ofp2manskeleton(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_rigging_pivots_from_armature(bpy.types.Operator):
+class DZOB_OT_rigging_pivots_from_armature(bpy.types.Operator):
     """Generate pivot points memory LOD from armature and skeleton definition"""
 
-    bl_idname = "a3ob.rigging_pivots_from_armature"
+    bl_idname = "dzob.rigging_pivots_from_armature"
     bl_label = "Pivots From Armature"
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -406,10 +406,10 @@ class A3OB_OT_rigging_pivots_from_armature(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_rigging_weights_select_unnormalized(bpy.types.Operator):
+class DZOB_OT_rigging_weights_select_unnormalized(bpy.types.Operator):
     """Select vertices with not normalized deform weights"""
     
-    bl_idname = "a3ob.rigging_weights_select_unnormalized"
+    bl_idname = "dzob.rigging_weights_select_unnormalized"
     bl_label = "Select Unnormalized"
     bl_options = {'REGISTER', 'UNDO'}
     
@@ -430,10 +430,10 @@ class A3OB_OT_rigging_weights_select_unnormalized(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_rigging_weights_select_overdetermined(bpy.types.Operator):
+class DZOB_OT_rigging_weights_select_overdetermined(bpy.types.Operator):
     """Select vertices with more than 4 deform bones assigned"""
     
-    bl_idname = "a3ob.rigging_weights_select_overdetermined"
+    bl_idname = "dzob.rigging_weights_select_overdetermined"
     bl_label = "Select Overdetermined"
     bl_options = {'REGISTER', 'UNDO'}
     
@@ -454,10 +454,10 @@ class A3OB_OT_rigging_weights_select_overdetermined(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_rigging_weights_normalize(bpy.types.Operator):
+class DZOB_OT_rigging_weights_normalize(bpy.types.Operator):
     """Normalize weights to deform bones"""
     
-    bl_idname = "a3ob.rigging_weights_normalize"
+    bl_idname = "dzob.rigging_weights_normalize"
     bl_label = "Normalize Weights"
     bl_options = {'REGISTER', 'UNDO'}
     
@@ -480,10 +480,10 @@ class A3OB_OT_rigging_weights_normalize(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_rigging_weights_prune_overdetermined(bpy.types.Operator):
+class DZOB_OT_rigging_weights_prune_overdetermined(bpy.types.Operator):
     """Prune excess deform bones from vertices with more than 4 assigned bones"""
     
-    bl_idname = "a3ob.rigging_weights_prune_overdetermined"
+    bl_idname = "dzob.rigging_weights_prune_overdetermined"
     bl_label = "Prune Overdetermined"
     bl_options = {'REGISTER', 'UNDO'}
     
@@ -506,10 +506,10 @@ class A3OB_OT_rigging_weights_prune_overdetermined(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_rigging_weights_prune(bpy.types.Operator):
+class DZOB_OT_rigging_weights_prune(bpy.types.Operator):
     """Prune vertex groups below weight threshold"""
     
-    bl_idname = "a3ob.rigging_weights_prune"
+    bl_idname = "dzob.rigging_weights_prune"
     bl_label = "Prune Selections"
     bl_options = {'REGISTER', 'UNDO'}
     
@@ -528,10 +528,10 @@ class A3OB_OT_rigging_weights_prune(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_rigging_weights_cleanup(bpy.types.Operator):
+class DZOB_OT_rigging_weights_cleanup(bpy.types.Operator):
     """General weight painting cleanup"""
     
-    bl_idname = "a3ob.rigging_weights_cleanup"
+    bl_idname = "dzob.rigging_weights_cleanup"
     bl_label = "General Cleanup"
     bl_options = {'REGISTER', 'UNDO'}
     
@@ -554,33 +554,33 @@ class A3OB_OT_rigging_weights_cleanup(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_MT_rigging_skeletons(bpy.types.Menu):
+class DZOB_MT_rigging_skeletons(bpy.types.Menu):
     bl_label = "Skeleton Specials"
 
     def draw(self, context):
         layout = self.layout
 
-        layout.operator("a3ob.rigging_skeletons_from_armature", icon='OUTLINER_OB_ARMATURE')
+        layout.operator("dzob.rigging_skeletons_from_armature", icon='OUTLINER_OB_ARMATURE')
         layout.separator()
-        layout.operator("a3ob.rigging_skeletons_ofp2manskeleton", icon='ARMATURE_DATA')
+        layout.operator("dzob.rigging_skeletons_ofp2manskeleton", icon='ARMATURE_DATA')
         layout.separator()
         layout.operator("dzob.rigging_skeletons_validate", text="Validate", icon='VIEWZOOM')
         layout.separator()
-        layout.operator("a3ob.rigging_skeletons_clear", text="Delete All Skeletons", icon='TRASH')
+        layout.operator("dzob.rigging_skeletons_clear", text="Delete All Skeletons", icon='TRASH')
 
 
-class A3OB_MT_rigging_bones(bpy.types.Menu):
+class DZOB_MT_rigging_bones(bpy.types.Menu):
     bl_label = "Bone Specials"
 
     def draw(self, context):
         layout = self.layout
         
-        layout.operator("a3ob.rigging_skeletons_bones_lowercase", icon='SYNTAX_OFF')
+        layout.operator("dzob.rigging_skeletons_bones_lowercase", icon='SYNTAX_OFF')
         layout.separator()
-        layout.operator("a3ob.rigging_skeletons_bones_clear", text="Delete All Bones", icon='TRASH')
+        layout.operator("dzob.rigging_skeletons_bones_clear", text="Delete All Bones", icon='TRASH')
 
 
-class A3OB_PT_rigging(bpy.types.Panel):
+class DZOB_PT_rigging(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = "Object Builder"
@@ -603,41 +603,41 @@ class A3OB_PT_rigging(bpy.types.Panel):
         row_skeletons = layout.row()
         col_skeletons_list = row_skeletons.column()
 
-        col_skeletons_list.template_list("A3OB_UL_rigging_skeletons", "A3OB_rigging_skeletons", scene_props, "skeletons", scene_props, "skeletons_index", rows=4)
+        col_skeletons_list.template_list("DZOB_UL_rigging_skeletons", "DZOB_rigging_skeletons", scene_props, "skeletons", scene_props, "skeletons_index", rows=4)
 
         col_skeletons_operators = row_skeletons.column(align=True)
-        col_skeletons_operators.operator("a3ob.rigging_skeletons_add", text="", icon='ADD')
-        col_skeletons_operators.operator("a3ob.rigging_skeletons_remove", text="", icon='REMOVE')
+        col_skeletons_operators.operator("dzob.rigging_skeletons_add", text="", icon='ADD')
+        col_skeletons_operators.operator("dzob.rigging_skeletons_remove", text="", icon='REMOVE')
         col_skeletons_operators.separator()
-        col_skeletons_operators.menu("A3OB_MT_rigging_skeletons", icon='DOWNARROW_HLT', text="")
+        col_skeletons_operators.menu("DZOB_MT_rigging_skeletons", icon='DOWNARROW_HLT', text="")
 
         row_bones = layout.row()
         col_bones_list = row_bones.column()
 
         if utils.is_valid_idx(scene_props.skeletons_index, scene_props.skeletons):
-            col_bones_list.template_list("A3OB_UL_rigging_bones", "A3OB_rigging_bones", scene_props.skeletons[scene_props.skeletons_index], "bones", scene_props.skeletons[scene_props.skeletons_index], "bones_index", rows=4)
+            col_bones_list.template_list("DZOB_UL_rigging_bones", "DZOB_rigging_bones", scene_props.skeletons[scene_props.skeletons_index], "bones", scene_props.skeletons[scene_props.skeletons_index], "bones_index", rows=4)
         else:
-            col_bones_list.template_list("A3OB_UL_rigging_bones", "A3OB_rigging_bones", scene_props, "bones", scene_props, "bones_index", rows=4)
+            col_bones_list.template_list("DZOB_UL_rigging_bones", "DZOB_rigging_bones", scene_props, "bones", scene_props, "bones_index", rows=4)
 
         col_bones_operators = row_bones.column(align=True)
-        col_bones_operators.operator("a3ob.rigging_skeletons_bones_add", text="", icon='ADD')
-        col_bones_operators.operator("a3ob.rigging_skeletons_bones_remove", text="", icon='REMOVE')
+        col_bones_operators.operator("dzob.rigging_skeletons_bones_add", text="", icon='ADD')
+        col_bones_operators.operator("dzob.rigging_skeletons_bones_remove", text="", icon='REMOVE')
         col_bones_operators.separator()
-        col_bones_operators.menu("A3OB_MT_rigging_bones", icon='DOWNARROW_HLT', text="")
+        col_bones_operators.menu("DZOB_MT_rigging_bones", icon='DOWNARROW_HLT', text="")
         col_bones_operators.separator()
-        col_bones_operators.operator("a3ob.rigging_skeletons_bones_move", text="", icon='TRIA_UP').direction = 'UP'
-        col_bones_operators.operator("a3ob.rigging_skeletons_bones_move", text="", icon='TRIA_DOWN').direction = 'DOWN'
+        col_bones_operators.operator("dzob.rigging_skeletons_bones_move", text="", icon='TRIA_UP').direction = 'UP'
+        col_bones_operators.operator("dzob.rigging_skeletons_bones_move", text="", icon='TRIA_DOWN').direction = 'DOWN'
 
 
-        layout.operator("a3ob.rigging_pivots_from_armature", icon_value=get_icon("op_pivots_from_armature"))
+        layout.operator("dzob.rigging_pivots_from_armature", icon_value=get_icon("op_pivots_from_armature"))
 
 
-class A3OB_PT_rigging_weights(bpy.types.Panel):
+class DZOB_PT_rigging_weights(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = "Object Builder"
     bl_label = "Weight Painting"
-    bl_parent_id = "A3OB_PT_rigging"
+    bl_parent_id = "DZOB_PT_rigging"
     bl_options = {'DEFAULT_CLOSED'}
     
     @classmethod
@@ -649,45 +649,45 @@ class A3OB_PT_rigging_weights(bpy.types.Panel):
         layout = self.layout
 
         col_select = layout.column(align=True)
-        col_select.operator("a3ob.rigging_weights_select_overdetermined", icon_value=get_icon("op_weights_select_overdetermined"))
-        col_select.operator("a3ob.rigging_weights_select_unnormalized", icon_value=get_icon("op_weights_select_unnormalized"))
+        col_select.operator("dzob.rigging_weights_select_overdetermined", icon_value=get_icon("op_weights_select_overdetermined"))
+        col_select.operator("dzob.rigging_weights_select_unnormalized", icon_value=get_icon("op_weights_select_unnormalized"))
         
         col_edit = layout.column(align=True)
-        col_edit.operator("a3ob.rigging_weights_prune", icon_value=get_icon("op_weights_prune"))
-        col_edit.operator("a3ob.rigging_weights_prune_overdetermined", icon_value=get_icon("op_weights_prune_overdetermined"))
-        col_edit.operator("a3ob.rigging_weights_normalize", icon_value=get_icon("op_weights_normalize"))
+        col_edit.operator("dzob.rigging_weights_prune", icon_value=get_icon("op_weights_prune"))
+        col_edit.operator("dzob.rigging_weights_prune_overdetermined", icon_value=get_icon("op_weights_prune_overdetermined"))
+        col_edit.operator("dzob.rigging_weights_normalize", icon_value=get_icon("op_weights_normalize"))
 
-        layout.operator("a3ob.rigging_weights_cleanup", icon_value=get_icon("op_weights_cleanup"))
+        layout.operator("dzob.rigging_weights_cleanup", icon_value=get_icon("op_weights_cleanup"))
 
         layout.prop(scene_props, "prune_threshold")
 
 
 classes = (
-    A3OB_UL_rigging_skeletons,
-    A3OB_UL_rigging_skeletons_noedit,
-    A3OB_UL_rigging_bones,
-    A3OB_OT_rigging_skeletons_add,
-    A3OB_OT_rigging_skeletons_remove,
-    A3OB_OT_rigging_skeletons_clear,
-    A3OB_OT_rigging_skeletons_validate,
-    A3OB_OT_rigging_skeletons_from_armature,
-    A3OB_OT_rigging_skeletons_bones_add,
-    A3OB_OT_rigging_skeletons_bones_remove,
-    A3OB_OT_rigging_skeletons_bones_move,
-    A3OB_OT_rigging_skeletons_bones_clear,
-    A3OB_OT_rigging_skeletons_bones_lowercase,
-    A3OB_OT_rigging_skeletons_ofp2manskeleton,
-    A3OB_OT_rigging_pivots_from_armature,
-    A3OB_OT_rigging_weights_select_unnormalized,
-    A3OB_OT_rigging_weights_select_overdetermined,
-    A3OB_OT_rigging_weights_normalize,
-    A3OB_OT_rigging_weights_prune_overdetermined,
-    A3OB_OT_rigging_weights_prune,
-    A3OB_OT_rigging_weights_cleanup,
-    A3OB_MT_rigging_skeletons,
-    A3OB_MT_rigging_bones,
-    A3OB_PT_rigging,
-    A3OB_PT_rigging_weights
+    DZOB_UL_rigging_skeletons,
+    DZOB_UL_rigging_skeletons_noedit,
+    DZOB_UL_rigging_bones,
+    DZOB_OT_rigging_skeletons_add,
+    DZOB_OT_rigging_skeletons_remove,
+    DZOB_OT_rigging_skeletons_clear,
+    DZOB_OT_rigging_skeletons_validate,
+    DZOB_OT_rigging_skeletons_from_armature,
+    DZOB_OT_rigging_skeletons_bones_add,
+    DZOB_OT_rigging_skeletons_bones_remove,
+    DZOB_OT_rigging_skeletons_bones_move,
+    DZOB_OT_rigging_skeletons_bones_clear,
+    DZOB_OT_rigging_skeletons_bones_lowercase,
+    DZOB_OT_rigging_skeletons_ofp2manskeleton,
+    DZOB_OT_rigging_pivots_from_armature,
+    DZOB_OT_rigging_weights_select_unnormalized,
+    DZOB_OT_rigging_weights_select_overdetermined,
+    DZOB_OT_rigging_weights_normalize,
+    DZOB_OT_rigging_weights_prune_overdetermined,
+    DZOB_OT_rigging_weights_prune,
+    DZOB_OT_rigging_weights_cleanup,
+    DZOB_MT_rigging_skeletons,
+    DZOB_MT_rigging_bones,
+    DZOB_PT_rigging,
+    DZOB_PT_rigging_weights
 )
 
 

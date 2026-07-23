@@ -10,6 +10,12 @@
       - primary support target is DayZ's ODOL v54; older Arma ODOL versions are supported on a best-effort basis
       - conversion is lossy and one way: the add-on never writes ODOL, so a model re-exported after an ODOL import is degraded relative to the original source
 
+### Changed
+
+- renamed the add-on's operator and class identifiers from the `A3OB` / `a3ob.` namespace to `DZOB` / `dzob.`
+  - the `.blend` custom-property identifiers (`a3ob_*` on objects, materials and the scene) are intentionally kept unchanged, so existing files keep their model metadata
+- user-facing labels, tooltips and descriptions rebranded from Arma to DayZ (upstream attribution and documentation links are retained)
+
 ### Removed
 
 - RTM animations are no longer supported (DayZ uses the updated Enfusion animation pipeline, not the Arma 3 `.rtm` format):

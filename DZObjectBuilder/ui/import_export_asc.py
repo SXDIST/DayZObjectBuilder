@@ -7,10 +7,10 @@ from ..io import import_asc, export_asc
 from ..utilities import generic as utils
 
 
-class A3OB_OP_import_asc(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
+class DZOB_OP_import_asc(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
     """Import Esri ASCII grid as DTM"""
     
-    bl_idname = "a3ob.import_asc"
+    bl_idname = "dzob.import_asc"
     bl_label = "Import ASC"
     bl_options = {'REGISTER', 'UNDO', 'PRESET'}
     filename_ext = ".asc"
@@ -49,7 +49,7 @@ class A3OB_OP_import_asc(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
         return {'FINISHED'}
 
 
-class A3OB_PT_import_asc_main(bpy.types.Panel):
+class DZOB_PT_import_asc_main(bpy.types.Panel):
     bl_space_type = 'FILE_BROWSER'
     bl_region_type = 'TOOL_PROPS'
     bl_label = "Main"
@@ -61,7 +61,7 @@ class A3OB_PT_import_asc_main(bpy.types.Panel):
         sfile = context.space_data
         operator = sfile.active_operator
         
-        return operator.bl_idname == "A3OB_OT_import_asc"
+        return operator.bl_idname == "DZOB_OT_import_asc"
     
     def draw(self, context):
         layout = self.layout
@@ -73,9 +73,9 @@ class A3OB_PT_import_asc_main(bpy.types.Panel):
         col.prop(operator, "vscale", text="Vertical")
 
 
-class A3OB_OP_export_asc(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
+class DZOB_OP_export_asc(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
     """Export DTM as Esri ASCII grid"""
-    bl_idname = "a3ob.export_asc"
+    bl_idname = "dzob.export_asc"
     bl_label = "Export ASC"
     bl_options = {'REGISTER', 'UNDO', 'PRESET'}
     filename_ext = ".asc"
@@ -129,7 +129,7 @@ class A3OB_OP_export_asc(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
         return {'FINISHED'}
 
 
-class A3OB_PT_export_asc_main(bpy.types.Panel):
+class DZOB_PT_export_asc_main(bpy.types.Panel):
     bl_space_type = 'FILE_BROWSER'
     bl_region_type = 'TOOL_PROPS'
     bl_label = "Main"
@@ -141,7 +141,7 @@ class A3OB_PT_export_asc_main(bpy.types.Panel):
         sfile = context.space_data
         operator = sfile.active_operator
         
-        return operator.bl_idname == "A3OB_OT_export_asc"
+        return operator.bl_idname == "DZOB_OT_export_asc"
     
     def draw(self, context):
         layout = self.layout
@@ -153,7 +153,7 @@ class A3OB_PT_export_asc_main(bpy.types.Panel):
         layout.prop(operator, "apply_modifiers")
 
 
-class A3OB_PT_export_asc_dimensions(bpy.types.Panel):
+class DZOB_PT_export_asc_dimensions(bpy.types.Panel):
     bl_space_type = 'FILE_BROWSER'
     bl_region_type = 'TOOL_PROPS'
     bl_label = "Dimensions"
@@ -164,7 +164,7 @@ class A3OB_PT_export_asc_dimensions(bpy.types.Panel):
         sfile = context.space_data
         operator = sfile.active_operator
         
-        return operator.bl_idname == "A3OB_OT_export_asc"
+        return operator.bl_idname == "DZOB_OT_export_asc"
     
     def draw(self, context):
         layout = self.layout
@@ -180,32 +180,32 @@ class A3OB_PT_export_asc_dimensions(bpy.types.Panel):
 
 
 classes = (
-    A3OB_OP_import_asc,
-    A3OB_PT_import_asc_main,
-    A3OB_OP_export_asc,
-    A3OB_PT_export_asc_main,
-    A3OB_PT_export_asc_dimensions
+    DZOB_OP_import_asc,
+    DZOB_PT_import_asc_main,
+    DZOB_OP_export_asc,
+    DZOB_PT_export_asc_main,
+    DZOB_PT_export_asc_dimensions
 )
 
 if bpy.app.version >= (4, 1, 0):
-    class A3OB_FH_import_asc(bpy.types.FileHandler):
+    class DZOB_FH_import_asc(bpy.types.FileHandler):
         bl_label = "File handler for ASC import"
-        bl_import_operator = "a3ob.import_asc"
+        bl_import_operator = "dzob.import_asc"
         bl_file_extensions = ".asc"
     
         @classmethod
         def poll_drop(cls, context):
             return context.area and context.area.type == 'VIEW_3D'
 
-    classes = (*classes, A3OB_FH_import_asc)
+    classes = (*classes, DZOB_FH_import_asc)
 
 
 def menu_func_import(self, context):
-    self.layout.operator(A3OB_OP_import_asc.bl_idname, text="Esri Grid ASCII (.asc)")
+    self.layout.operator(DZOB_OP_import_asc.bl_idname, text="Esri Grid ASCII (.asc)")
 
 
 def menu_func_export(self, context):
-    self.layout.operator(A3OB_OP_export_asc.bl_idname, text="Esri Grid ASCII (.asc)")
+    self.layout.operator(DZOB_OP_export_asc.bl_idname, text="Esri Grid ASCII (.asc)")
 
 
 def register():

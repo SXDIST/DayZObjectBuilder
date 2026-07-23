@@ -39,59 +39,59 @@ def add_operators(layout, files):
         op.internal = True
 
 
-class A3OB_MT_scripts_import(bpy.types.Menu):
+class DZOB_MT_scripts_import(bpy.types.Menu):
     bl_label = "Import"
 
     def draw(self, context):
         add_operators(self.layout, scripts["import"])
 
 
-class A3OB_MT_scripts_vertex_groups(bpy.types.Menu):
+class DZOB_MT_scripts_vertex_groups(bpy.types.Menu):
     bl_label = "Vertex Groups"
 
     def draw(self, context):
         add_operators(self.layout, scripts["vertex_groups"])
 
 
-class A3OB_MT_scripts_rvmat(bpy.types.Menu):
+class DZOB_MT_scripts_rvmat(bpy.types.Menu):
     bl_label = "RVMAT Templates"
 
     def draw(self, context):
         add_operators(self.layout, scripts["rvmat"])
 
 
-class A3OB_MT_scripts_misc(bpy.types.Menu):
+class DZOB_MT_scripts_misc(bpy.types.Menu):
     bl_label = "Misc"
 
     def draw(self, context):
         add_operators(self.layout, scripts["misc"])
 
 
-class A3OB_MT_scripts(bpy.types.Menu):
+class DZOB_MT_scripts(bpy.types.Menu):
     """Utility scripts from DayZ Object Builder"""
 
     bl_label = "Scripts"
 
     def draw(self, context):
         layout = self.layout
-        layout.menu("A3OB_MT_scripts_import")
-        layout.menu("A3OB_MT_scripts_vertex_groups")
-        layout.menu("A3OB_MT_scripts_rvmat")
-        layout.menu("A3OB_MT_scripts_misc")
+        layout.menu("DZOB_MT_scripts_import")
+        layout.menu("DZOB_MT_scripts_vertex_groups")
+        layout.menu("DZOB_MT_scripts_rvmat")
+        layout.menu("DZOB_MT_scripts_misc")
 
 
 classes = (
-    A3OB_MT_scripts_import,
-    A3OB_MT_scripts_vertex_groups,
-    A3OB_MT_scripts_rvmat,
-    A3OB_MT_scripts_misc,
-    A3OB_MT_scripts
+    DZOB_MT_scripts_import,
+    DZOB_MT_scripts_vertex_groups,
+    DZOB_MT_scripts_rvmat,
+    DZOB_MT_scripts_misc,
+    DZOB_MT_scripts
 )
 
 
 def draw_scripts_menu(self, context):
     self.layout.separator()
-    self.layout.menu("A3OB_MT_scripts", text="Object Builder", icon_value=get_icon("addon"))
+    self.layout.menu("DZOB_MT_scripts", text="Object Builder", icon_value=get_icon("addon"))
 
 
 def register():

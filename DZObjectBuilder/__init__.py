@@ -1,6 +1,6 @@
 bl_info = {
     "name": "DayZ Object Builder",
-    "description": "Collection of tools for editing DayZ and Arma content",
+    "description": "Collection of tools for editing DayZ content",
     "author": "SXDIST (DZOB fork), MrClock (Arma 3 Object Builder add-on), Hans-Joerg \"Alwarren\" Frieden (original ArmaToolbox add-on)",
     "version": (4, 2, 4),
     "blender": (2, 90, 0),
@@ -62,32 +62,32 @@ def outliner_enable_update(self, context):
 
 class A3OB_OT_prefs_find_a3_tools(bpy.types.Operator):
     """Find the Arma 3 Tools installation through the Windows registry"""
-    
+
     bl_idname = "a3ob.prefs_find_a3_tools"
     bl_label = "Find Arma 3 Tools"
     bl_options = {'REGISTER', 'UNDO'}
-    
+
     @classmethod
     def poll(cls, context):
         return True
-    
+
     def execute(self, context):
         try:
             from winreg import OpenKey, QueryValueEx, HKEY_CURRENT_USER
             key = OpenKey(HKEY_CURRENT_USER, r"software\bohemia interactive\arma 3 tools")
             value, _type = QueryValueEx(key, "path")
             addon_prefs.a3_tools = value
-            
+
         except Exception:
             self.report({'ERROR'}, "The Arma 3 Tools installation could not be found, it has to be set manually")
-        
+
         return {'FINISHED'}
 
 
-class A3OB_OT_prefs_edit_flag_vertex(bpy.types.Operator):
+class DZOB_OT_prefs_edit_flag_vertex(bpy.types.Operator):
     """Set the default vertex flag value"""
 
-    bl_idname = "a3ob.prefs_edit_flag_vertex"
+    bl_idname = "dzob.prefs_edit_flag_vertex"
     bl_label = "Edit"
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -158,10 +158,10 @@ class A3OB_OT_prefs_edit_flag_vertex(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_prefs_edit_flag_face(bpy.types.Operator):
+class DZOB_OT_prefs_edit_flag_face(bpy.types.Operator):
     """Set the default face flag value"""
 
-    bl_idname = "a3ob.prefs_edit_flag_face"
+    bl_idname = "dzob.prefs_edit_flag_face"
     bl_label = "Edit"
     bl_options = {'REGISTER', 'UNDO'}
     
@@ -210,7 +210,7 @@ class A3OB_OT_prefs_edit_flag_face(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_AT_preferences(bpy.types.AddonPreferences):
+class DZOB_AT_preferences(bpy.types.AddonPreferences):
     bl_idname = __package__
     
     tabs: bpy.props.EnumProperty(
@@ -322,11 +322,11 @@ class A3OB_AT_preferences(bpy.types.AddonPreferences):
         elif self.tabs == 'DEFAULTS':
             row_vertex = box.row(align=True)
             row_vertex.prop(self, "flag_vertex_display")
-            row_vertex.operator("a3ob.prefs_edit_flag_vertex", text="", icon='GREASEPENCIL')
+            row_vertex.operator("dzob.prefs_edit_flag_vertex", text="", icon='GREASEPENCIL')
 
             row_face = box.row(align=True)
             row_face.prop(self, "flag_face_display")
-            row_face.operator("a3ob.prefs_edit_flag_face", text="", icon='GREASEPENCIL')
+            row_face.operator("dzob.prefs_edit_flag_face", text="", icon='GREASEPENCIL')
         
         elif self.tabs == 'DEBUG':
             box.prop(self, "preserve_faulty_output")
@@ -335,9 +335,9 @@ class A3OB_AT_preferences(bpy.types.AddonPreferences):
 
 classes = (
     A3OB_OT_prefs_find_a3_tools,
-    A3OB_OT_prefs_edit_flag_vertex,
-    A3OB_OT_prefs_edit_flag_face,
-    A3OB_AT_preferences
+    DZOB_OT_prefs_edit_flag_vertex,
+    DZOB_OT_prefs_edit_flag_face,
+    DZOB_AT_preferences
 )
 
 

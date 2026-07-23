@@ -6,10 +6,10 @@ from ..utilities import rigging as riggingutils
 from ..utilities import generic as utils
 
 
-class A3OB_OP_import_armature(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
-    """Import Arma 3 armature"""
+class DZOB_OP_import_armature(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
+    """Import armature"""
 
-    bl_idname = "a3ob.import_armature"
+    bl_idname = "dzob.import_armature"
     bl_label = "Import Pivots"
     bl_options = {'REGISTER', 'UNDO', 'PRESET'}
     filename_ext = "*.p3d"
@@ -52,7 +52,7 @@ class A3OB_OP_import_armature(bpy.types.Operator, bpy_extras.io_utils.ImportHelp
         return {'FINISHED'}
 
 
-class A3OB_PT_import_armature_main(bpy.types.Panel):
+class DZOB_PT_import_armature_main(bpy.types.Panel):
     bl_space_type = 'FILE_BROWSER'
     bl_region_type = 'TOOL_PROPS'
     bl_label = "Main"
@@ -64,7 +64,7 @@ class A3OB_PT_import_armature_main(bpy.types.Panel):
         sfile = context.space_data
         operator = sfile.active_operator
         
-        return operator.bl_idname == "A3OB_OT_import_armature"
+        return operator.bl_idname == "DZOB_OT_import_armature"
     
     def draw(self, context):
         layout = self.layout
@@ -72,18 +72,18 @@ class A3OB_PT_import_armature_main(bpy.types.Panel):
         operator = sfile.active_operator
         scene_props = context.scene.a3ob_rigging
 
-        layout.template_list("A3OB_UL_rigging_skeletons_noedit", "A3OB_armature_skeletons", scene_props, "skeletons", operator, "skeleton_index", rows=3)
+        layout.template_list("DZOB_UL_rigging_skeletons_noedit", "DZOB_armature_skeletons", scene_props, "skeletons", operator, "skeleton_index", rows=3)
         layout.prop(operator, "ignore_without_pivot")
 
 
 classes = (
-    A3OB_OP_import_armature,
-    A3OB_PT_import_armature_main
+    DZOB_OP_import_armature,
+    DZOB_PT_import_armature_main
 )
 
 
 def menu_func_import(self, context):
-    self.layout.operator(A3OB_OP_import_armature.bl_idname, text="Arma 3 armature (.p3d)")
+    self.layout.operator(DZOB_OP_import_armature.bl_idname, text="DayZ armature (.p3d)")
 
 
 def register():

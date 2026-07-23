@@ -8,10 +8,10 @@ from ..io import import_p3d, export_p3d
 from ..utilities import generic as utils
 
 
-class A3OB_OP_import_p3d(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
-    """Import Arma 3 MLOD P3D"""
+class DZOB_OP_import_p3d(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
+    """Import MLOD P3D"""
     
-    bl_idname = "a3ob.import_p3d"
+    bl_idname = "dzob.import_p3d"
     bl_label = "Import P3D"
     bl_options = {'REGISTER', 'UNDO', 'PRESET'}
     filename_ext = ".p3d"
@@ -112,7 +112,7 @@ class A3OB_OP_import_p3d(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
         return {'FINISHED'}
 
 
-class A3OB_PT_import_p3d_main(bpy.types.Panel):
+class DZOB_PT_import_p3d_main(bpy.types.Panel):
     bl_space_type = 'FILE_BROWSER'
     bl_region_type = 'TOOL_PROPS'
     bl_label = "Main"
@@ -124,7 +124,7 @@ class A3OB_PT_import_p3d_main(bpy.types.Panel):
         sfile = context.space_data
         operator = sfile.active_operator
         
-        return operator.bl_idname == "A3OB_OT_import_p3d"
+        return operator.bl_idname == "DZOB_OT_import_p3d"
     
     def draw(self, context):
         layout = self.layout
@@ -137,7 +137,7 @@ class A3OB_PT_import_p3d_main(bpy.types.Panel):
         layout.prop(operator, "validate_meshes")
 
 
-class A3OB_PT_import_p3d_collections(bpy.types.Panel):
+class DZOB_PT_import_p3d_collections(bpy.types.Panel):
     bl_space_type = 'FILE_BROWSER'
     bl_region_type = 'TOOL_PROPS'
     bl_label = "Collections"
@@ -148,7 +148,7 @@ class A3OB_PT_import_p3d_collections(bpy.types.Panel):
         sfile = context.space_data
         operator = sfile.active_operator
         
-        return operator.bl_idname == "A3OB_OT_import_p3d"
+        return operator.bl_idname == "DZOB_OT_import_p3d"
     
     def draw(self, context):
         layout = self.layout
@@ -161,7 +161,7 @@ class A3OB_PT_import_p3d_collections(bpy.types.Panel):
         layout.prop(operator, "groupby")
 
 
-class A3OB_PT_import_p3d_data(bpy.types.Panel):
+class DZOB_PT_import_p3d_data(bpy.types.Panel):
     bl_space_type = 'FILE_BROWSER'
     bl_region_type = 'TOOL_PROPS'
     bl_label = "Data"
@@ -172,7 +172,7 @@ class A3OB_PT_import_p3d_data(bpy.types.Panel):
         sfile = context.space_data
         operator = sfile.active_operator
         
-        return operator.bl_idname == "A3OB_OT_import_p3d"
+        return operator.bl_idname == "DZOB_OT_import_p3d"
     
     def draw(self, context):
         layout = self.layout
@@ -194,7 +194,7 @@ class A3OB_PT_import_p3d_data(bpy.types.Panel):
             row_sections.enabled = False
 
 
-class A3OB_PT_import_p3d_post(bpy.types.Panel):
+class DZOB_PT_import_p3d_post(bpy.types.Panel):
     bl_space_type = 'FILE_BROWSER'
     bl_region_type = 'TOOL_PROPS'
     bl_label = "Postprocess"
@@ -205,7 +205,7 @@ class A3OB_PT_import_p3d_post(bpy.types.Panel):
         sfile = context.space_data
         operator = sfile.active_operator
         
-        return operator.bl_idname == "A3OB_OT_import_p3d"
+        return operator.bl_idname == "DZOB_OT_import_p3d"
         
     def draw(self, context):
         layout = self.layout
@@ -234,10 +234,10 @@ class A3OB_PT_import_p3d_post(bpy.types.Panel):
             col.prop(operator, "proxy_action", expand=True)
 
 
-class A3OB_OP_export_p3d(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
-    """Export to Arma 3 MLOD P3D"""
+class DZOB_OP_export_p3d(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
+    """Export to MLOD P3D"""
     
-    bl_idname = "a3ob.export_p3d"
+    bl_idname = "dzob.export_p3d"
     bl_label = "Export P3D"
     bl_options = {'REGISTER', 'UNDO', 'PRESET'}
     filename_ext = ".p3d"
@@ -354,7 +354,7 @@ class A3OB_OP_export_p3d(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
         return {'FINISHED'}
 
 
-class A3OB_PT_export_p3d_main(bpy.types.Panel):
+class DZOB_PT_export_p3d_main(bpy.types.Panel):
     bl_space_type = 'FILE_BROWSER'
     bl_region_type = 'TOOL_PROPS'
     bl_label = "Include"
@@ -366,7 +366,7 @@ class A3OB_PT_export_p3d_main(bpy.types.Panel):
         sfile = context.space_data
         operator = sfile.active_operator
         
-        return operator.bl_idname == "A3OB_OT_export_p3d"
+        return operator.bl_idname == "DZOB_OT_export_p3d"
     
     def draw(self, context):
         layout = self.layout
@@ -378,7 +378,7 @@ class A3OB_PT_export_p3d_main(bpy.types.Panel):
         layout.prop(operator, "relative_paths")
 
 
-class A3OB_PT_export_p3d_include(bpy.types.Panel):
+class DZOB_PT_export_p3d_include(bpy.types.Panel):
     bl_space_type = 'FILE_BROWSER'
     bl_region_type = 'TOOL_PROPS'
     bl_label = "Include"
@@ -389,7 +389,7 @@ class A3OB_PT_export_p3d_include(bpy.types.Panel):
         sfile = context.space_data
         operator = sfile.active_operator
         
-        return operator.bl_idname == "A3OB_OT_export_p3d"
+        return operator.bl_idname == "DZOB_OT_export_p3d"
     
     def draw(self, context):
         layout = self.layout
@@ -405,7 +405,7 @@ class A3OB_PT_export_p3d_include(bpy.types.Panel):
         row_visible.enabled = False
 
 
-class A3OB_PT_export_p3d_meshes(bpy.types.Panel):
+class DZOB_PT_export_p3d_meshes(bpy.types.Panel):
     bl_space_type = 'FILE_BROWSER'
     bl_region_type = 'TOOL_PROPS'
     bl_label = "Mesh Data"
@@ -416,7 +416,7 @@ class A3OB_PT_export_p3d_meshes(bpy.types.Panel):
         sfile = context.space_data
         operator = sfile.active_operator
         
-        return operator.bl_idname == "A3OB_OT_export_p3d"
+        return operator.bl_idname == "DZOB_OT_export_p3d"
     
     def draw(self, context):
         layout = self.layout
@@ -434,7 +434,7 @@ class A3OB_PT_export_p3d_meshes(bpy.types.Panel):
         col.prop(operator, "generate_components")
 
 
-class A3OB_PT_export_p3d_validate(bpy.types.Panel):
+class DZOB_PT_export_p3d_validate(bpy.types.Panel):
     bl_space_type = 'FILE_BROWSER'
     bl_region_type = 'TOOL_PROPS'
     bl_label = "LODs"
@@ -445,7 +445,7 @@ class A3OB_PT_export_p3d_validate(bpy.types.Panel):
         sfile = context.space_data
         operator = sfile.active_operator
         
-        return operator.bl_idname == "A3OB_OT_export_p3d"
+        return operator.bl_idname == "DZOB_OT_export_p3d"
     
     def draw(self, context):
         layout = self.layout
@@ -462,7 +462,7 @@ class A3OB_PT_export_p3d_validate(bpy.types.Panel):
         row.enabled = operator.validate_lods
 
 
-class A3OB_PT_export_p3d_post(bpy.types.Panel):
+class DZOB_PT_export_p3d_post(bpy.types.Panel):
     bl_space_type = 'FILE_BROWSER'
     bl_region_type = 'TOOL_PROPS'
     bl_label = "Postprocess"
@@ -473,7 +473,7 @@ class A3OB_PT_export_p3d_post(bpy.types.Panel):
         sfile = context.space_data
         operator = sfile.active_operator
         
-        return operator.bl_idname == "A3OB_OT_export_p3d"
+        return operator.bl_idname == "DZOB_OT_export_p3d"
     
     def draw(self, context):
         layout = self.layout
@@ -488,38 +488,38 @@ class A3OB_PT_export_p3d_post(bpy.types.Panel):
 
 
 classes = (
-    A3OB_OP_import_p3d,
-    A3OB_PT_import_p3d_main,
-    A3OB_PT_import_p3d_collections,
-    A3OB_PT_import_p3d_data,
-    A3OB_PT_import_p3d_post,
-    A3OB_OP_export_p3d,
-    A3OB_PT_export_p3d_main,
-    A3OB_PT_export_p3d_include,
-    A3OB_PT_export_p3d_meshes,
-    A3OB_PT_export_p3d_validate,
-    A3OB_PT_export_p3d_post
+    DZOB_OP_import_p3d,
+    DZOB_PT_import_p3d_main,
+    DZOB_PT_import_p3d_collections,
+    DZOB_PT_import_p3d_data,
+    DZOB_PT_import_p3d_post,
+    DZOB_OP_export_p3d,
+    DZOB_PT_export_p3d_main,
+    DZOB_PT_export_p3d_include,
+    DZOB_PT_export_p3d_meshes,
+    DZOB_PT_export_p3d_validate,
+    DZOB_PT_export_p3d_post
 )
 
 if bpy.app.version >= (4, 1, 0):
-    class A3OB_FH_import_p3d(bpy.types.FileHandler):
+    class DZOB_FH_import_p3d(bpy.types.FileHandler):
         bl_label = "File handler for P3D import"
-        bl_import_operator = "a3ob.import_p3d"
+        bl_import_operator = "dzob.import_p3d"
         bl_file_extensions = ".p3d"
     
         @classmethod
         def poll_drop(cls, context):
             return context.area and context.area.type == 'VIEW_3D'
 
-    classes = (*classes, A3OB_FH_import_p3d)
+    classes = (*classes, DZOB_FH_import_p3d)
 
 
 def menu_func_import(self, context):
-    self.layout.operator(A3OB_OP_import_p3d.bl_idname, text="Arma 3 model (.p3d)")
+    self.layout.operator(DZOB_OP_import_p3d.bl_idname, text="DayZ model (.p3d)")
 
 
 def menu_func_export(self, context):
-    self.layout.operator(A3OB_OP_export_p3d.bl_idname, text="Arma 3 model (.p3d)")
+    self.layout.operator(DZOB_OP_export_p3d.bl_idname, text="DayZ model (.p3d)")
 
 
 def register():

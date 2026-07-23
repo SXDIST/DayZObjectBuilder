@@ -8,10 +8,10 @@ from ..io import import_tbcsv, export_tbcsv
 from ..utilities import generic as utils
 
 
-class A3OB_OP_import_tbcsv(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
-    """Import Arma 3 map object positions"""
+class DZOB_OP_import_tbcsv(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
+    """Import map object positions"""
     
-    bl_idname = "a3ob.import_tbcsv"
+    bl_idname = "dzob.import_tbcsv"
     bl_label = "Import Positions"
     bl_options = {'REGISTER', 'UNDO', 'PRESET'}
     filename_ext = ".txt"
@@ -75,10 +75,10 @@ class A3OB_OP_import_tbcsv(bpy.types.Operator, bpy_extras.io_utils.ImportHelper)
         return {'FINISHED'}
 
 
-class A3OB_OP_export_tbcsv(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
-    """Export Arma 3 map object positions"""
+class DZOB_OP_export_tbcsv(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
+    """Export map object positions"""
     
-    bl_idname = "a3ob.export_tbcsv"
+    bl_idname = "dzob.export_tbcsv"
     bl_label = "Export Positions"
     bl_options = {'REGISTER', 'UNDO', 'PRESET'}
     filename_ext = ".txt"
@@ -160,31 +160,31 @@ class A3OB_OP_export_tbcsv(bpy.types.Operator, bpy_extras.io_utils.ExportHelper)
 
 
 classes = (
-    A3OB_OP_import_tbcsv,
-    A3OB_OP_export_tbcsv
+    DZOB_OP_import_tbcsv,
+    DZOB_OP_export_tbcsv
 )
 
 
 if bpy.app.version >= (4, 1, 0):
-    class A3OB_FH_tbcsv(bpy.types.FileHandler):
-        bl_label = "Arma 3 map objects list"
-        bl_import_operator = "a3ob.import_tbcsv"
-        bl_export_operator = "a3ob.export_tbcsv"
+    class DZOB_FH_tbcsv(bpy.types.FileHandler):
+        bl_label = "Terrain Builder objects list"
+        bl_import_operator = "dzob.import_tbcsv"
+        bl_export_operator = "dzob.export_tbcsv"
         bl_file_extensions = ".txt"
     
         @classmethod
         def poll_drop(cls, context):
             return context.area and context.area.type == 'VIEW_3D'
 
-    classes = (*classes, A3OB_FH_tbcsv)
+    classes = (*classes, DZOB_FH_tbcsv)
 
 
 def menu_func_import(self, context):
-    self.layout.operator(A3OB_OP_import_tbcsv.bl_idname, text="Arma 3 map objects (.txt)")
+    self.layout.operator(DZOB_OP_import_tbcsv.bl_idname, text="Terrain Builder objects (.txt)")
 
 
 def menu_func_export(self, context):
-    self.layout.operator(A3OB_OP_export_tbcsv.bl_idname, text="Arma 3 map objects (.txt)")
+    self.layout.operator(DZOB_OP_export_tbcsv.bl_idname, text="Terrain Builder objects (.txt)")
 
 
 def register():

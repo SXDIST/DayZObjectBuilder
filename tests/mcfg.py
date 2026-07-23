@@ -23,7 +23,7 @@ class McfgTest(unittest.TestCase):
 
         file_in_mcfg = os.path.join(folder_inputs, "model.cfg")
 
-        bpy.ops.a3ob.import_mcfg(filepath=file_in_mcfg)
+        bpy.ops.dzob.import_mcfg(filepath=file_in_mcfg)
         
         scene_props = bpy.context.scene.a3ob_rigging
         self.assertEqual(len(scene_props.skeletons), 1)
@@ -48,7 +48,7 @@ class McfgTest(unittest.TestCase):
             bone.name = ("bone_%d" % (i + 1))
             bone.parent = "bone_0"
         
-        bpy.ops.a3ob.export_mcfg(filepath=file_out_mcfg, skeleton_index=0)
+        bpy.ops.dzob.export_mcfg(filepath=file_out_mcfg, skeleton_index=0)
 
 
 def main():

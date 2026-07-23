@@ -7,7 +7,7 @@ from ..utilities import generic as utils
 from ..utilities import data
 
 
-class A3OB_PG_properties_material(bpy.types.PropertyGroup):
+class DZOB_PG_properties_material(bpy.types.PropertyGroup):
     texture_type: bpy.props.EnumProperty( 
         name = "Texture Source",
         description = "Source of face texture",
@@ -98,7 +98,7 @@ class A3OB_PG_properties_material(bpy.types.PropertyGroup):
 
 
 classes = (
-    A3OB_PG_properties_material,
+    DZOB_PG_properties_material,
 )
 
 
@@ -106,7 +106,7 @@ def register():
     for cls in classes:
         bpy.utils.register_class(cls)
     
-    bpy.types.Material.a3ob_properties_material = bpy.props.PointerProperty(type=A3OB_PG_properties_material)
+    bpy.types.Material.a3ob_properties_material = bpy.props.PointerProperty(type=DZOB_PG_properties_material)
     
     print("\t" + "Properties: material")
 

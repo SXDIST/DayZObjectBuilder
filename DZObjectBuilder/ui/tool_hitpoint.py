@@ -5,10 +5,10 @@ from ..utilities import generic as utils
 from ..utilities import clouds as cloudutils
 
 
-class A3OB_OT_hitpoints_generate(bpy.types.Operator):
+class DZOB_OT_hitpoints_generate(bpy.types.Operator):
     """Create hit points cloud from shape"""
     
-    bl_idname = "a3ob.hitpoints_generate"
+    bl_idname = "dzob.hitpoints_generate"
     bl_label = "Generate Hit Point Cloud"
     bl_options = {'REGISTER', 'UNDO'}
     
@@ -22,7 +22,7 @@ class A3OB_OT_hitpoints_generate(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_PT_hitpoints(bpy.types.Panel):   
+class DZOB_PT_hitpoints(bpy.types.Panel):   
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = "Object Builder"
@@ -57,12 +57,12 @@ class A3OB_PT_hitpoints(bpy.types.Panel):
         col_selection = layout.column(align=True, heading="Selection:")
         col_selection.prop(scene_props, "selection", text="", icon='MESH_DATA')
         
-        layout.operator("a3ob.hitpoints_generate", text="Generate", icon_value=get_icon("op_hitpoints_generate"))
+        layout.operator("dzob.hitpoints_generate", text="Generate", icon_value=get_icon("op_hitpoints_generate"))
 
 
 classes = (
-    A3OB_OT_hitpoints_generate,
-    A3OB_PT_hitpoints
+    DZOB_OT_hitpoints_generate,
+    DZOB_PT_hitpoints
 )
 
 
