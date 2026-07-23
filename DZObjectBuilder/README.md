@@ -7,7 +7,6 @@ DayZ Object Builder (DZOB) is a free add-on for Blender to help content developm
 - P3D import-export
 - Binarized (ODOL) P3D import
 - ASC import-export
-- RTM import-export
 - PAA import
 - skeleton import-export (model.cfg)
 - object list import-export (for Terrain Builder)

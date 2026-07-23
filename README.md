@@ -25,7 +25,6 @@ It is a **DayZ**-focused fork of [**Arma 3 Object Builder**](https://github.com/
 | Format | Notes |
 | ------ | ----- |
 | **P3D** models | Full round-trip, plus direct **binarized (ODOL)** import |
-| **RTM** animations | Keyframe animation data |
 | **ASC** terrain | Heightfields |
 | **PAA** textures | Import (DXT1 / DXT5) |
 | **model.cfg** skeletons | Import & export |

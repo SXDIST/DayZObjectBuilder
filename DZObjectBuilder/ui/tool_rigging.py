@@ -198,11 +198,6 @@ class A3OB_OT_rigging_skeletons_validate(bpy.types.Operator):
     bl_label = "Validate Skeleton"
     bl_options = {'REGISTER'}
 
-    for_rtm: bpy.props.BoolProperty(
-        name = "For RTM",
-        description = "Validate skeleton for use with RTM animations"
-    )
-
     @classmethod
     def poll(cls, context):
         scene_props = context.scene.a3ob_rigging
@@ -212,7 +207,7 @@ class A3OB_OT_rigging_skeletons_validate(bpy.types.Operator):
         scene_props = context.scene.a3ob_rigging
         skeleton = scene_props.skeletons[scene_props.skeletons_index]
         validator = Validator(ProcessLogger())
-        success = validator.validate_skeleton(skeleton, self.for_rtm)
+        success = validator.validate_skeleton(skeleton)
 
         if success:
             self.report({'INFO'}, "Validation succeeded")
@@ -569,9 +564,7 @@ class A3OB_MT_rigging_skeletons(bpy.types.Menu):
         layout.separator()
         layout.operator("a3ob.rigging_skeletons_ofp2manskeleton", icon='ARMATURE_DATA')
         layout.separator()
-        layout.operator("a3ob.rigging_skeletons_validate", text="Validate", icon='VIEWZOOM')
-        op = layout.operator("a3ob.rigging_skeletons_validate", text="Validate For RTM")
-        op.for_rtm = True
+        layout.operator("dzob.rigging_skeletons_validate", text="Validate", icon='VIEWZOOM')
         layout.separator()
         layout.operator("a3ob.rigging_skeletons_clear", text="Delete All Skeletons", icon='TRASH')
 

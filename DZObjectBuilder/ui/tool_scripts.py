@@ -12,7 +12,6 @@ scripts = {
     },
     "import": {
         "P3D batch": "import_p3d_batch.py",
-        "RTM batch": "import_rtm_batch.py",
         "OFP2_ManSkeleton": "ofp2_manskeleton.py"
     },
     "rvmat": {
@@ -21,8 +20,7 @@ scripts = {
         "Super Shader - Weapon": "super_weapon.rvmat_template"
     },
     "misc": {
-        "Convert ATBX to A3OB": "convert_atbx_to_a3ob.py",
-        "Convert BMTR to plain RTM": "convert_bmtr_to_rtm.py",
+        "Convert ATBX to DZOB": "convert_atbx_to_a3ob.py",
         "Create dummy P3D": "create_dummy_p3d.py"
     }
 }

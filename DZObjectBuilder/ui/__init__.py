@@ -9,14 +9,10 @@ if "props_object_mesh" in locals():
         reload(import_export_mcfg)
     if "import_export_p3d" in locals():
         reload(import_export_p3d)
-    if "import_export_rtm" in locals():
-        reload(import_export_rtm)
     if "import_export_tbcsv" in locals():
         reload(import_export_tbcsv)
     if "import_export_paa" in locals():
         reload(import_export_paa)
-    if "props_action" in locals():
-        reload(props_action)
     if "props_material" in locals():
         reload(props_material)
     if "props_object_mesh" in locals():
@@ -47,10 +43,8 @@ from . import import_export_armature
 from . import import_export_asc
 from . import import_export_mcfg
 from . import import_export_p3d
-from . import import_export_rtm
 from . import import_export_tbcsv
 from . import import_export_paa
-from . import props_action
 from . import props_material
 from . import props_object_mesh
 from . import tool_outliner

@@ -10,6 +10,14 @@
       - primary support target is DayZ's ODOL v54; older Arma ODOL versions are supported on a best-effort basis
       - conversion is lossy and one way: the add-on never writes ODOL, so a model re-exported after an ODOL import is degraded relative to the original source
 
+### Removed
+
+- RTM animations are no longer supported (DayZ uses the updated Enfusion animation pipeline, not the Arma 3 `.rtm` format):
+  - RTM import and export operators, and the Arma 3 animation (.rtm) entries in the File > Import/Export menus
+  - RTM Properties panel (frames and frame properties) from the Dope Sheet, and the associated action properties
+  - "Validate For RTM" skeleton validation option
+  - "RTM batch" import and "Convert BMTR to plain RTM" utility scripts
+
 ## [v2.5.1](https://github.com/MrClock8163/Arma3ObjectBuilder/releases/tag/v2.5.1) (Blender 2.90 -> 4.4)
 
 ### Fixed
