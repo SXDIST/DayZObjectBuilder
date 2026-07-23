@@ -5,7 +5,7 @@
 <h1 align="center">DayZ Object Builder</h1>
 
 <p align="center">
-  A free <strong>Blender</strong> add-on for importing, exporting and editing the model, animation and terrain formats used by <strong>DayZ</strong> and <strong>Arma 3</strong>.
+  A free <strong>Blender</strong> add-on for importing, exporting and editing the model, animation and terrain formats used by <strong>DayZ</strong>.
 </p>
 
 <p align="center">
@@ -16,7 +16,7 @@
 
 **DayZ Object Builder** (**DZOB**) brings the Bohemia Interactive content pipeline into Blender: open a binarized model straight from the game, edit it, and export it back — without leaving the viewport.
 
-It is a fork of [**Arma 3 Object Builder**](https://github.com/MrClock8163/Arma3ObjectBuilder) by MrClock, focused on the **DayZ** workflow. Because both games share the P3D, RVMAT and RTM formats, the add-on stays fully usable for **Arma 3** content as well.
+It is a **DayZ**-focused fork of [**Arma 3 Object Builder**](https://github.com/MrClock8163/Arma3ObjectBuilder) by MrClock, adapted and extended specifically for the **DayZ** modding workflow.
 
 ## Features
 
@@ -59,7 +59,7 @@ Download a packaged release, or clone this repository and pack the `DZObjectBuil
 > [!WARNING]
 > **DZOB cannot be enabled alongside Arma 3 Object Builder.** The fork deliberately keeps the upstream operator, property and panel identifiers, so both add-ons register the same names. Disable one before enabling the other.
 
-That same decision is what keeps existing `.blend` files working: the Arma metadata on your objects is stored under the upstream property names, and renaming those would silently drop it.
+That same decision is what keeps existing `.blend` files working: the model metadata on your objects is stored under the upstream property names, and renaming those would silently drop it.
 
 ## Documentation
 
@@ -69,7 +69,7 @@ Since the identifiers and panels match upstream, MrClock's documentation on [Git
 
 The lineage of this add-on:
 
-- [**ArmAToolbox**](https://github.com/AlwarrenSidh/ArmAToolbox) by Hans-Joerg "Alwarren" Frieden — the original Blender add-on for the Arma engine formats.
+- [**ArmAToolbox**](https://github.com/AlwarrenSidh/ArmAToolbox) by Hans-Joerg "Alwarren" Frieden — the original Blender add-on for the Bohemia Interactive engine formats.
 - [**Arma 3 Object Builder**](https://github.com/MrClock8163/Arma3ObjectBuilder) by MrClock — a reimplementation of a similar workflow with extended features and an interface closer to Blender's design. This fork's direct parent, and the source of nearly all of its code.
 - **DayZ Object Builder** — this fork.
 
