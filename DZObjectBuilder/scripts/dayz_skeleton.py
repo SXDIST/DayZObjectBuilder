@@ -1,6 +1,6 @@
 #   ---------------------------------------- HEADER ----------------------------------------
 #
-#   Author: MrClock
+#   Author: SXDIST
 #   Add-on: DayZ Object Builder
 #
 #   Description:
