@@ -11,6 +11,8 @@ import bmesh
 import mathutils
 
 from . import data_p3d as p3d
+from . import data_p3d_odol as odol
+from . import odol_to_mlod
 from ..utilities import generic as utils
 from ..utilities import lod as lodutils
 from ..utilities import compat as computils
@@ -429,7 +431,26 @@ def read_file(operator, context, file):
         logger.step("Importing 1st LOD only")
     
     time_read_start = time.time()
-    mlod = p3d.P3D_MLOD.read(file, operator.first_lod_only)
+    signature = file.read(4)
+    file.seek(0)
+
+    if signature == b"MLOD":
+        mlod = p3d.P3D_MLOD.read(file, operator.first_lod_only)
+    else:
+        # Binarized input: parse ODOL and convert into the same model the rest of
+        # the importer expects. Conversion is lossy and one way; ODOL is never written.
+        logger.step("Binarized (ODOL) file detected, converting")
+        odol_file = odol.ODOL_File.read(file)
+        mlod = odol_to_mlod.convert(odol_file)
+        for index, reason in odol_file.failed_lods:
+            logger.step("LOD %d could not be read: %s" % (index, reason))
+        for index, reason in mlod.failed_lods:
+            logger.step("LOD %d could not be converted: %s" % (index, reason))
+        for index, lod in enumerate(mlod.lods):
+            if not lod.verts:
+                logger.step("LOD %d converted with 0 vertices (empty object)" % index)
+        if operator.first_lod_only:
+            mlod.lods = mlod.lods[:1]
     logger.step("File reading done in %f sec" % (time.time() - time_read_start))
 
     logger.step("File version: %d" % mlod.version)

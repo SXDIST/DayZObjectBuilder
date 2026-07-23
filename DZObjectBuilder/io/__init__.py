@@ -11,6 +11,8 @@ if "binary_handler" in locals():
         reload(data_asc)
     if "data_p3d" in locals():
         reload(data_p3d)
+    if "data_p3d_odol" in locals():
+        reload(data_p3d_odol)
     if "data_rtm" in locals():
         reload(data_rtm)
     if "data_tbcsv" in locals():
@@ -41,6 +43,8 @@ if "binary_handler" in locals():
         reload(import_tbcsv)
     if "import_paa" in locals():
         reload(import_paa)
+    if "odol_to_mlod" in locals():
+        reload(odol_to_mlod)
 
 
 from . import binary_handler
@@ -48,6 +52,7 @@ from . import config
 from . import compression
 from . import data_asc
 from . import data_p3d
+from . import data_p3d_odol
 from . import data_rtm
 from . import data_tbcsv
 from . import data_paa
@@ -63,3 +68,4 @@ from . import import_p3d
 from . import import_rtm
 from . import import_tbcsv
 from . import import_paa
+from . import odol_to_mlod

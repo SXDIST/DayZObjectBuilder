@@ -1,5 +1,15 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- import-export:
+  - P3D:
+    - binarized (ODOL) P3D import, read directly through the normal P3D import with no external debinarizer
+      - primary support target is DayZ's ODOL v54; older Arma ODOL versions are supported on a best-effort basis
+      - conversion is lossy and one way: the add-on never writes ODOL, so a model re-exported after an ODOL import is degraded relative to the original source
+
 ## [v2.5.1](https://github.com/MrClock8163/Arma3ObjectBuilder/releases/tag/v2.5.1) (Blender 2.90 -> 4.4)
 
 ### Fixed

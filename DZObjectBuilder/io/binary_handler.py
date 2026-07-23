@@ -80,7 +80,9 @@ def read_char(file, count = 1):
 # Therefore using UTF-8 decoding is more robust, and gives the same result for valid ASCII values.
 # https://stackoverflow.com/a/32775270
 def read_asciiz(file):
-    eof = iter(functools.partial(file.read, 1), "")
+    # The sentinel has to be a bytes object, otherwise it never compares equal to
+    # what file.read returns and the iterator spins forever once the file ends.
+    eof = iter(functools.partial(file.read, 1), b"")
     return b"".join(itertools.takewhile(b"\x00".__ne__, eof)).decode('utf8', errors="replace")
 
 def read_asciiz_field(file, field_len):

@@ -5,6 +5,7 @@ DayZ Object Builder (DZOB) is a free add-on for Blender to help content developm
 ## Main features
 
 - P3D import-export
+- Binarized (ODOL) P3D import
 - ASC import-export
 - RTM import-export
 - PAA import
@@ -20,6 +21,7 @@ DayZ Object Builder (DZOB) is a free add-on for Blender to help content developm
 - Windows long path (`MAX_PATH`) support throughout file I/O, for deeply nested unpacked asset trees
 - import/export operators report failures as errors instead of raising unhandled tracebacks
 - texture and RVMAT auto-search over a mod root, matching sets even when the normal map is named differently from the color map
+- binarized (ODOL) P3D import, read directly through the normal P3D import with no external debinarizer; conversion is lossy and one way, the add-on never writes ODOL, and a re-exported model is degraded relative to the original source
 
 ## Documentation
 
