@@ -7,6 +7,7 @@ It is a fork of [**Arma 3 Object Builder**](https://github.com/MrClock8163/Arma3
 ## Features
 
 - P3D import-export
+- Binarized (ODOL) P3D import
 - RTM animation import-export
 - ASC terrain import-export
 - PAA texture import
@@ -22,6 +23,10 @@ It is a fork of [**Arma 3 Object Builder**](https://github.com/MrClock8163/Arma3
 - **Windows long path support.** Paths over the 260 character `MAX_PATH` limit are opened through the extended-length API. Unpacked game asset trees routinely exceed it, especially once the temporary suffix is appended during export.
 - **Import and export errors are reported, not raised.** Failures surface as an operator error with the traceback in the system console, instead of an unhandled Blender popup.
 - **Texture and RVMAT auto-search.** Point the add-on at a mod root and it resolves the face texture and bound RVMAT for a material from its Base Color image. RVMAT candidates are ranked by whether they actually reference the resolved `.paa`, so sets whose normal map is named differently from the color map still match.
+- **Binarized (ODOL) P3D import.** Binarized models open directly through the normal
+  P3D import, with no external debinarizer. Conversion is lossy and one way: the
+  add-on never writes ODOL, and a re-exported model is degraded relative to the
+  original source.
 
 ## Requirements and Compatibility
 
