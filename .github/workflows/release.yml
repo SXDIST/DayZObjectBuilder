@@ -81,6 +81,7 @@ jobs:
       - name: Generate release notes (Claude Code)
         if: steps.check.outputs.exists == 'false'
         id: notes
+        continue-on-error: true  # падение заметок не должно ронять релиз
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
         run: |
@@ -107,9 +108,12 @@ jobs:
             echo "Предыдущих тегов нет — берём всю историю."
           fi
 
-          log=$(git log --no-merges --pretty=format:'- %s%n%b' "$range" | head -c 12000)
+          # без пайпа в head: git log в переменную (иначе SIGPIPE -> exit 141
+          # под pipefail+errexit), ограничение по числу коммитов и по длине.
+          log=$(git log --no-merges -n 80 --pretty=format:'- %s%n%b' "$range" 2>/dev/null || true)
+          log=${log:0:12000}
           if [ -z "$log" ]; then
-            log="(no notable commits since $prev)"
+            log="(no notable commits since ${prev:-start})"
           fi
 
           instructions=$(cat <<EOF
