@@ -16,6 +16,10 @@
     - skin weights are cleaned up on import: the padded remainder influence (byte-quantisation slop on a stray bone) is dropped and the remaining weights are renormalised
     - the mesh is shaded smooth with free (unlocked) normals
     - XOB6 (ZLib streams) is verified; XOB8 (LZ4 streams) is supported on a best-effort basis
+  - ANM:
+    - native import of DayZ's Enfusion `.anm` animations (File > Import > DayZ animation, or drag-and-drop) onto the active armature, as an action — no external tool required
+    - keyframes are matched to the armature's bones by name and applied through the DayZ bone-space fix, so a vanilla DayZ rig plays back correctly
+    - note tracks are imported as pose markers; any existing action is preserved as an NLA strip
 
 ### Changed
 

@@ -349,6 +349,7 @@ modules = (
     ui.props_material,
     ui.import_export_p3d,
     ui.import_export_xob,
+    ui.import_export_anm,
     ui.import_export_mcfg,
     ui.import_export_armature,
     ui.import_export_tbcsv,
