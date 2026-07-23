@@ -1,0 +1,156 @@
+name: Release add-on
+
+# Авто-релиз DZObjectBuilder.
+# При push в master workflow читает version из blender_manifest.toml,
+# формирует тег vX.Y.Z и, если такого тега ещё нет, собирает zip папки
+# DZObjectBuilder и публикует GitHub Release с ним. Чтобы выпустить новую
+# версию — достаточно бампнуть version в манифесте (и в __init__.py) и запушить.
+# Можно также запустить вручную через Actions -> Run workflow.
+#
+# Заметки к релизу пишет Claude Code (по подписке) на английском по коммитам.
+# Требуется секрет CLAUDE_CODE_OAUTH_TOKEN — токен из `claude setup-token`
+# (Settings -> Secrets and variables -> Actions).
+# Без него релиз всё равно выйдет — с авто-заметками GitHub.
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "DZObjectBuilder/**"
+      - ".github/workflows/release.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read version from manifest
+        id: ver
+        run: |
+          version=$(grep -oP '^\s*version\s*=\s*"\K[^"]+' DZObjectBuilder/blender_manifest.toml)
+          if [ -z "$version" ]; then
+            echo "::error::Не удалось прочитать version из DZObjectBuilder/blender_manifest.toml"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+          echo "Версия из манифеста: v$version"
+
+      - name: Check whether tag already exists
+        id: check
+        run: |
+          if git ls-remote --exit-code --tags origin "refs/tags/${{ steps.ver.outputs.tag }}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Тег ${{ steps.ver.outputs.tag }} уже существует — релиз пропускается."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "Тег ${{ steps.ver.outputs.tag }} новый — будет создан релиз."
+          fi
+
+      - name: Build zip
+        if: steps.check.outputs.exists == 'false'
+        id: build
+        run: |
+          asset="DZObjectBuilder-${{ steps.ver.outputs.tag }}.zip"
+          mkdir -p dist
+          zip -r "dist/$asset" DZObjectBuilder \
+            -x 'DZObjectBuilder/**/__pycache__/*' \
+            -x '*.pyc'
+          echo "asset=dist/$asset" >> "$GITHUB_OUTPUT"
+          echo "Собран архив: dist/$asset"
+
+      # Заметки к релизу пишет Claude Code (по подписке, headless) на английском
+      # по коммитам между предыдущим тегом и HEAD. Если секрета
+      # CLAUDE_CODE_OAUTH_TOKEN нет или запуск не удался — тихо откатываемся
+      # на авто-заметки GitHub (--generate-notes).
+      - name: Generate release notes (Claude Code)
+        if: steps.check.outputs.exists == 'false'
+        id: notes
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          set -uo pipefail
+
+          if [ -z "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]; then
+            echo "::warning::CLAUDE_CODE_OAUTH_TOKEN не задан — заметки сгенерирует GitHub."
+            echo "generated=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if ! npm install -g @anthropic-ai/claude-code >/dev/null 2>&1; then
+            echo "::warning::Не удалось установить Claude Code — откат на --generate-notes."
+            echo "generated=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          prev=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -n "$prev" ]; then
+            range="$prev..HEAD"
+            echo "Диапазон коммитов: $range"
+          else
+            range="HEAD"
+            echo "Предыдущих тегов нет — берём всю историю."
+          fi
+
+          log=$(git log --no-merges --pretty=format:'- %s%n%b' "$range" | head -c 12000)
+          if [ -z "$log" ]; then
+            log="(no notable commits since $prev)"
+          fi
+
+          instructions=$(cat <<EOF
+          Write release notes in English, in GitHub-flavored Markdown, for version ${{ steps.ver.outputs.tag }} of DZObjectBuilder — a Blender add-on for DayZ and Arma modding (import/export of P3D models and related tools).
+          Base the notes ONLY on the git log below. Group changes under "### Added", "### Changed", and "### Fixed" headings; omit any heading that has no items. Write concise, user-facing bullet points — describe the effect for the user, not the raw commit wording. Merge duplicate or trivial commits.
+          Respond with ONLY the release notes Markdown: no preamble, no explanation, no surrounding code fences.
+          EOF
+          )
+          prompt=$(printf '%s\n\nGit log:\n%s\n' "$instructions" "$log")
+
+          # headless: без инструментов (весь контекст — в промпте),
+          # bypassPermissions чтобы не зависнуть на запросах разрешений.
+          if ! claude -p "$prompt" \
+              --allowedTools "" \
+              --permission-mode bypassPermissions \
+              > release-notes.md 2> claude-err.log; then
+            echo "::warning::Claude Code завершился с ошибкой — откат на --generate-notes."
+            sed 's/^/  claude: /' claude-err.log || true
+            echo "generated=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ -s release-notes.md ]; then
+            echo "generated=true" >> "$GITHUB_OUTPUT"
+            echo "Заметки сгенерированы Claude Code."
+          else
+            echo "::warning::Пустой ответ Claude Code — откат на --generate-notes."
+            echo "generated=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create GitHub Release
+        if: steps.check.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ steps.notes.outputs.generated }}" = "true" ]; then
+            gh release create "${{ steps.ver.outputs.tag }}" \
+              "${{ steps.build.outputs.asset }}" \
+              --title "${{ steps.ver.outputs.tag }}" \
+              --target "${{ github.sha }}" \
+              --notes-file release-notes.md
+          else
+            gh release create "${{ steps.ver.outputs.tag }}" \
+              "${{ steps.build.outputs.asset }}" \
+              --title "${{ steps.ver.outputs.tag }}" \
+              --target "${{ github.sha }}" \
+              --generate-notes
+          fi

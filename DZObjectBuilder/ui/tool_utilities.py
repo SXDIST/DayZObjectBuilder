@@ -488,8 +488,8 @@ class A3OB_MT_help(bpy.types.Menu):
         layout.operator("wm.url_open", text="Documentation", icon='HELP').url = "https://mrcmodding.gitbook.io/arma-3-object-builder/home"
         layout.operator("wm.url_open", text="Quick Start Reference", icon='URL').url = "https://mrcmodding.gitbook.io/arma-3-object-builder/quick-start-reference"
         layout.separator()
-        layout.operator("wm.url_open", text="Releases", icon='URL').url = "https://github.com/SXDIST/DZObjectBuilder/releases"
-        layout.operator("wm.url_open", text="Issue Tracker", icon='URL').url = "https://github.com/SXDIST/DZObjectBuilder/issues"
+        layout.operator("wm.url_open", text="Releases", icon='URL').url = "https://github.com/SXDIST/DayZObjectBuilder/releases"
+        layout.operator("wm.url_open", text="Issue Tracker", icon='URL').url = "https://github.com/SXDIST/DayZObjectBuilder/issues"
         layout.operator("a3ob.open_changelog", text="Changelog", icon='TEXT')
 
 

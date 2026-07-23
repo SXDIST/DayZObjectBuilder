@@ -2,12 +2,12 @@ bl_info = {
     "name": "DayZ Object Builder",
     "description": "Collection of tools for editing DayZ and Arma content",
     "author": "SXDIST (DZOB fork), MrClock (Arma 3 Object Builder add-on), Hans-Joerg \"Alwarren\" Frieden (original ArmaToolbox add-on)",
-    "version": (2, 5, 1),
+    "version": (4, 2, 4),
     "blender": (2, 90, 0),
     "location": "Object Builder panels",
     "warning": "Development",
     "doc_url": "https://mrcmodding.gitbook.io/arma-3-object-builder/home",
-    "tracker_url": "https://github.com/SXDIST/DZObjectBuilder/issues",
+    "tracker_url": "https://github.com/SXDIST/DayZObjectBuilder/issues",
     "category": "Import-Export"
 }
 
