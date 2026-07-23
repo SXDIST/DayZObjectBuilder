@@ -124,17 +124,22 @@ jobs:
           )
           prompt=$(printf '%s\n\nGit log:\n%s\n' "$instructions" "$log")
 
-          # headless: без инструментов (весь контекст — в промпте),
-          # bypassPermissions чтобы не зависнуть на запросах разрешений.
+          # headless. НЕ передаём --allowedTools "" — пустое значение ломает CLI
+          # (ошибка уходит в stdout, exit!=0). Инструменты и так не нужны: весь
+          # контекст уже в промпте. bypassPermissions — чтобы не зависнуть на
+          # запросах разрешений. НЕ используем --bare: он отключает чтение
+          # OAuth-токена (CLAUDE_CODE_OAUTH_TOKEN). При ошибке печатаем оба
+          # потока (claude пишет ошибки в stdout, а не stderr).
           if ! claude -p "$prompt" \
-              --allowedTools "" \
               --permission-mode bypassPermissions \
-              > release-notes.md 2> claude-err.log; then
+              > claude-out.md 2> claude-err.log; then
             echo "::warning::Claude Code завершился с ошибкой — откат на --generate-notes."
-            sed 's/^/  claude: /' claude-err.log || true
+            echo "--- claude stderr ---"; sed 's/^/  /' claude-err.log 2>/dev/null || true
+            echo "--- claude stdout ---"; sed 's/^/  /' claude-out.md 2>/dev/null || true
             echo "generated=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+          mv claude-out.md release-notes.md
 
           if [ -s release-notes.md ]; then
             echo "generated=true" >> "$GITHUB_OUTPUT"
