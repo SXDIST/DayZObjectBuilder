@@ -42,7 +42,9 @@ def build_armature(bones, name, collection):
         children.setdefault(b.parent, []).append(i)
 
     armature = bpy.data.armatures.new(name)
+    armature.display_type = 'STICK'
     obj = bpy.data.objects.new(name, armature)
+    obj.show_in_front = True
     collection.objects.link(obj)
     bpy.context.view_layer.objects.active = obj
     obj.select_set(True)
