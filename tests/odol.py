@@ -501,6 +501,145 @@ class TestNamedSelections(unittest.TestCase):
         self.assertEqual(camo.weights, [])
 
 
+@unittest.skipUnless(os.path.isfile(DRUM), "test corpus not available")
+class TestConversion(unittest.TestCase):
+    def convert_drum(self):
+        odol_to_mlod, p3d = load_io("odol_to_mlod", "data_p3d")
+        with open(DRUM, "rb") as file:
+            model = odol.ODOL_File.read(file)
+
+        return odol_to_mlod.convert(model), p3d
+
+    def test_converts_to_readable_mlod_model(self):
+        mlod, p3d = self.convert_drum()
+
+        self.assertIsInstance(mlod, p3d.P3D_MLOD)
+        self.assertGreater(len(mlod.lods), 0)
+
+        for lod in mlod.lods:
+            for face in lod.faces:
+                vertices, normals, uvs, texture, material, flag = face
+                self.assertIn(len(vertices), (3, 4))
+                self.assertEqual(len(uvs), len(vertices))
+                self.assertEqual(len(normals), len(vertices))
+                for vi in vertices:
+                    self.assertLess(vi, len(lod.verts))
+                for ni in normals:
+                    self.assertLess(ni, len(lod.normals))
+
+    def test_resolutions_decode_to_lod_types(self):
+        # The 55 gallon drum's nine LODs: four visual resolutions, then view pilot,
+        # geometry, memory, view geometry and fire geometry (format notes 4.1).
+        mlod, p3d = self.convert_drum()
+        res = p3d.P3D_LOD_Resolution
+
+        got = [lod.resolution.get() for lod in mlod.lods]
+        self.assertEqual(got, [
+            (res.VISUAL, 1), (res.VISUAL, 2), (res.VISUAL, 3), (res.VISUAL, 4),
+            (res.VIEW_PILOT, 0), (res.GEOMETRY, 0), (res.MEMORY, 0),
+            (res.VIEW_GEOMETRY, 0), (res.FIRE_GEOMETRY, 0),
+        ])
+
+    def test_materials_are_carried_onto_faces(self):
+        mlod, _ = self.convert_drum()
+        lod = mlod.lods[0]
+
+        for face in lod.faces:
+            self.assertEqual(face[3], "dz\\gear\\containers\\data\\barrel_green_co.paa")
+            self.assertEqual(face[4], "dz\\gear\\containers\\data\\barrel_green.rvmat")
+
+    def test_stored_winding_and_normals_both_point_outward(self):
+        # The highest-risk decision in the task, pinned rather than left to prose.
+        # The brief says to negate the normals AND reverse the winding; measurement
+        # says do neither. On the drum's cylindrical wall the outward direction is
+        # unambiguous, so this checks that the CONVERTED face - both its stored
+        # per-vertex normal and the normal implied by its stored winding order -
+        # faces away from the drum axis. If either had been flipped this fails.
+        mlod, _ = self.convert_drum()
+        lod = mlod.lods[0]
+
+        xs = [v[0] for v in lod.verts]
+        ys = [v[1] for v in lod.verts]
+        zs = [v[2] for v in lod.verts]
+        centre_x = (min(xs) + max(xs)) / 2
+        centre_z = (min(zs) + max(zs)) / 2
+
+        def cross(a, b):
+            return (a[1] * b[2] - a[2] * b[1],
+                    a[2] * b[0] - a[0] * b[2],
+                    a[0] * b[1] - a[1] * b[0])
+
+        normal_out = normal_in = winding_out = winding_in = winding_disagree = 0
+        for face in lod.faces:
+            indices = face[0]
+            corners = [lod.verts[i] for i in indices]
+            mid_x = sum(c[0] for c in corners) / len(corners)
+            mid_y = sum(c[1] for c in corners) / len(corners)
+            mid_z = sum(c[2] for c in corners) / len(corners)
+            radius_x, radius_z = mid_x - centre_x, mid_z - centre_z
+            radius = (radius_x ** 2 + radius_z ** 2) ** 0.5
+
+            # Only faces clearly on the side wall, away from the lid and the base.
+            if radius < 0.25 or not 0.15 < mid_y < 0.7:
+                continue
+
+            outward = (radius_x, 0.0, radius_z)
+
+            stored = [lod.normals[i] for i in face[1]]
+            navg = (sum(n[0] for n in stored), sum(n[1] for n in stored), sum(n[2] for n in stored))
+            if navg[0] * outward[0] + navg[2] * outward[2] > 0:
+                normal_out += 1
+            else:
+                normal_in += 1
+
+            v0, v1, v2 = corners[0], corners[1], corners[2]
+            wn = cross((v1[0] - v0[0], v1[1] - v0[1], v1[2] - v0[2]),
+                       (v2[0] - v0[0], v2[1] - v0[1], v2[2] - v0[2]))
+            if wn[0] * outward[0] + wn[2] * outward[2] > 0:
+                winding_out += 1
+            else:
+                winding_in += 1
+
+            # The two must also agree with each other: the winding-implied normal and
+            # the stored normal point the same way. This is what proves the winding
+            # was not reversed relative to the (unflipped) normals.
+            if wn[0] * navg[0] + wn[1] * navg[1] + wn[2] * navg[2] <= 0:
+                winding_disagree += 1
+
+        self.assertGreater(normal_out, 3 * normal_in)
+        self.assertGreater(winding_out, 3 * winding_in)
+        self.assertEqual(winding_disagree, 0)
+
+    def test_named_selections_become_selection_taggs(self):
+        odol_to_mlod, p3d = load_io("odol_to_mlod", "data_p3d")
+
+        if not os.path.isfile(JACKET):
+            self.skipTest("jacket corpus not available")
+
+        with open(JACKET, "rb") as file:
+            model = odol.ODOL_File.read(file)
+
+        mlod = odol_to_mlod.convert(model)
+        lod = mlod.lods[0]
+
+        selection_taggs = [tagg for tagg in lod.taggs if tagg.is_selection()]
+        self.assertEqual(len(selection_taggs), 31)
+
+        by_name = {tagg.name: tagg for tagg in selection_taggs}
+
+        # A bone selection keeps its per-vertex weights.
+        spine = by_name["spine"]
+        self.assertEqual(len(spine.data.weight_verts), 401)
+        for _, weight in spine.data.weight_verts:
+            self.assertGreaterEqual(weight, 0.0)
+            self.assertLessEqual(weight, 1.0)
+
+        # A hidden selection carries every face, so it selects the vertices they touch.
+        camo = by_name["camofemale"]
+        self.assertGreater(len(camo.data.weight_verts), 0)
+        self.assertEqual(len(camo.data.weight_faces), len(lod.faces))
+
+
 @unittest.skipUnless(os.path.isfile(RAIL), "test corpus not available")
 class TestLZOVariant(unittest.TestCase):
     """Which LZO1X variant ODOL uses, pinned against a model that can tell them apart.
@@ -635,6 +774,9 @@ CORPUS_GUARANTEES = (
     (JACKET, "TestNamedSelections (BDU_Jacket_f.p3d) - named selections and the per-vertex bone "
              "weight decode. DayZ v54 keeps the skinning in vertexBoneRef, not in the named "
              "selection member, and the weight byte maps as byte/255; only a rigged garment shows it"),
+    (DRUM, "TestConversion (55galDrum.p3d) - the ODOL->MLOD conversion, and in particular that the "
+           "converted faces keep their stored winding and unflipped normals both pointing outward "
+           "(vertices absolute with no centre offset), which the brief's sketch gets backwards"),
 )
 
 
