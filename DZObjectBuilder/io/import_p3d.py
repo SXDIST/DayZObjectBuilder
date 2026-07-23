@@ -442,10 +442,12 @@ def read_file(operator, context, file):
         logger.step("Binarized (ODOL) file detected, converting")
         odol_file = odol.ODOL_File.read(file)
         mlod = odol_to_mlod.convert(odol_file)
-        if operator.first_lod_only:
-            mlod.lods = mlod.lods[:1]
         for index, reason in odol_file.failed_lods:
             logger.step("LOD %d could not be read: %s" % (index, reason))
+        for index, reason in mlod.failed_lods:
+            logger.step("LOD %d could not be converted: %s" % (index, reason))
+        if operator.first_lod_only:
+            mlod.lods = mlod.lods[:1]
     logger.step("File reading done in %f sec" % (time.time() - time_read_start))
 
     logger.step("File version: %d" % mlod.version)
