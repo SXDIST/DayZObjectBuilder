@@ -72,7 +72,15 @@ def build_armature(bones, name, collection):
     return obj, bone_names
 
 
-def build_mesh(mesh, bone_names, name, collection, arm_obj):
+def _get_material(name):
+    mat = bpy.data.materials.get(name)
+    if mat is None:
+        mat = bpy.data.materials.new(name)
+        mat.use_nodes = True
+    return mat
+
+
+def build_mesh(mesh, bone_names, material_name, name, collection, arm_obj):
     me = bpy.data.meshes.new(name)
     verts = [tuple(_conv(v.pos)) for v in mesh.verts]
     me.from_pydata(verts, [], [f for f in mesh.faces])
@@ -81,10 +89,20 @@ def build_mesh(mesh, bone_names, name, collection, arm_obj):
     obj = bpy.data.objects.new(name, me)
     collection.objects.link(obj)
 
+    if material_name:
+        me.materials.append(_get_material(material_name))
+
     if mesh.verts and mesh.verts[0].uvs:
         uv_layer = me.uv_layers.new(name="UVMap")
         for loop in me.loops:
             uv_layer.data[loop.index].uv = mesh.verts[loop.vertex_index].uvs[0]
+
+    # Shade smooth but leave the normals unlocked (auto, geometry based). The
+    # .xob carries baked vertex normals, but importing them as custom split
+    # normals locks the mesh shading, which is unwanted for an editable base
+    # body. Keeping free normals is equivalent to a "Reset Vectors".
+    for poly in me.polygons:
+        poly.use_smooth = True
 
     if arm_obj is not None and mesh.skinned:
         groups = {}
@@ -127,7 +145,8 @@ def import_file(operator, context):
     if operator.import_mesh:
         for i, mesh in enumerate(model.meshes):
             mesh_name = mesh.name or ("%s_%d" % (base, i))
-            build_mesh(mesh, bone_names, mesh_name, collection,
+            material_name = model.materials[mesh.material] if 0 <= mesh.material < len(model.materials) else ""
+            build_mesh(mesh, bone_names, material_name, mesh_name, collection,
                        arm_obj if operator.import_weights else None)
             mesh_count += 1
         logger.step("Built %d mesh object(s)" % mesh_count)

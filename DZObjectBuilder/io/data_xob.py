@@ -24,6 +24,13 @@ XOB8_MAGIC = 4918288444549123928
 STREAM_LZ4 = 877615692
 STREAM_ZLIB = 1112099930
 
+# The 4th vertex influence is an implied remainder (1 - w0 - w1 - w2). When a
+# vertex actually uses 3 or fewer bones, its unused 4th slot is padded with a
+# stray bone index while the remainder only carries byte-quantisation slop
+# (multiples of 1/255). Dropping that remainder below this threshold removes the
+# scattered junk weights without touching genuine 4-bone influences.
+WEIGHT_REMAINDER_EPS = 0.05
+
 
 class _Reader:
     __slots__ = ("b", "p")
@@ -259,8 +266,11 @@ class XOB_Model:
                             ws.append((idx[1], w1))
                         if w2 > 0.0:
                             ws.append((idx[2], w2))
-                        if w3 > 0.0 and idx[3] not in (idx[0], idx[1], idx[2]):
+                        if w3 > WEIGHT_REMAINDER_EPS and idx[3] not in (idx[0], idx[1], idx[2]):
                             ws.append((idx[3], w3))
+                        total = sum(w for _, w in ws)
+                        if total > 0.0:
+                            ws = [(b, w / total) for b, w in ws]
                         vert.weights = ws
                     geo.seek(base + nweights * 16)
                 else:

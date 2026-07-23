@@ -11,8 +11,10 @@
       - conversion is lossy and one way: the add-on never writes ODOL, so a model re-exported after an ODOL import is degraded relative to the original source
   - XOB:
     - native import of DayZ's Enfusion `.xob` models (File > Import > DayZ model, or drag-and-drop) — no external tool required
-    - builds an armature from the model's skeleton, the mesh with its UVs, and binds the two with the imported skin weights
+    - builds an armature from the model's skeleton, the mesh with its UVs and material slots, and binds the two with the imported skin weights
     - bone / vertex-group names are normalised to DayZ's canonical PascalCase
+    - skin weights are cleaned up on import: the padded remainder influence (byte-quantisation slop on a stray bone) is dropped and the remaining weights are renormalised
+    - the mesh is shaded smooth with free (unlocked) normals
     - XOB6 (ZLib streams) is verified; XOB8 (LZ4 streams) is supported on a best-effort basis
 
 ### Changed
