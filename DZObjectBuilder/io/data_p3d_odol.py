@@ -93,7 +93,7 @@ def skip_model_info(file, version, file_size):
     file.seek(4, 1)                 # shadow_offset
     file.seek(1, 1)                 # animated
 
-    skip_skeleton(file, version, file_size)
+    bones = read_skeleton(file, version, file_size)
 
     file.seek(1, 1)                 # map_type
     skip_compressed_floats(file, file_size)  # per point masses of the geometry LOD
@@ -105,6 +105,8 @@ def skip_model_info(file, version, file_size):
     binary.read_asciiz(file)        # damage
     file.seek(1, 1)                 # frequent
     file.seek(4, 1)                 # unknown
+
+    return bones
 
 
 # Below version 64 an array is LZO compressed whenever it would occupy at least
@@ -204,10 +206,15 @@ def read_condensed_array(file, element_size, file_size, bi_variant = LZO_BI_VARI
     return read_compressed_array(file, element_size, count, bi_variant)
 
 
-def skip_skeleton(file, version, file_size):
+# The skeleton bone names are captured, not just skipped: named selections carry no
+# bone weights of their own in DayZ v54 (see the LOD reader), so the per-vertex
+# skinning has to be joined onto them by matching a selection's name to a bone's, and
+# that join needs this ordered list to turn a vertexBoneRef bone index into a name.
+def read_skeleton(file, version, file_size):
+    bones = []
     name = binary.read_asciiz(file)
     if not name:
-        return
+        return bones
 
     file.seek(1, 1)                 # is_discrete
     count_bones = read_count(file, file_size, "skeleton bone")
@@ -215,11 +222,13 @@ def skip_skeleton(file, version, file_size):
         if file.tell() >= file_size:
             raise ODOL_Error("Skeleton bone list ran past the end of the file")
 
-        binary.read_asciiz(file)    # bone name
-        binary.read_asciiz(file)    # parent name
+        bones.append(binary.read_asciiz(file))  # bone name
+        binary.read_asciiz(file)                # parent name
 
     if version > 44:
         binary.read_asciiz(file)    # obsolete pivots name
+
+    return bones
 
 
 # Animation classes, followed by the bones-to-animations and animations-to-bones
@@ -471,6 +480,99 @@ def read_uv_set(file, file_size, keep):
              min_v + (values[i * 2 + 1] + 32768) * span_v) for i in range(len(values) // 2)]
 
 
+# A named selection. In a binarized DayZ v54 LOD it names a run of faces (a hidden
+# selection like "camofemale") or a skeleton bone (like "spine"). The per-vertex bone
+# weights are NOT stored in this member: measured on BDU_Jacket_f.p3d, every named
+# selection's own selectedVertices and weights arrays are empty across all five visual
+# LODs. The skinning is held instead in the LOD's vertexBoneRef block, and is joined
+# back onto the bone selections by name (see ODOL_LOD.read). So `faces` comes straight
+# from this member, while `vertices` and `weights` are filled in from vertexBoneRef for
+# selections whose name matches a skeleton bone, and stay empty for the rest.
+class ODOL_NamedSelection():
+    def __init__(self, name):
+        self.name = name
+        self.faces = []
+        self.vertices = []
+        self.weights = []
+
+
+# vertexBoneRef weight byte -> weight float. Measured, NOT assumed: on BDU_Jacket_f.p3d
+# every vertex's weight bytes sum to exactly 255 (all 4932 visual-LOD entries), and every
+# fully bound vertex (one bone, one weight) carries the byte 255. So the encoding is a
+# plain byte / 255, and full binding lands on 1.0. This is the ODOL vertexBoneRef
+# skinning encoding; it is distinct from the MLOD selection-tagg byte encoding, which is
+# the non-linear one (0 -> 0.0, 1 -> 1.0, else (256 - b) / 255) that the reference notes
+# describe. That non-linear form never appears here because these bytes come from
+# vertexBoneRef, where the bytes of a vertex are a partition of 255.
+WEIGHT_SCALE = 255.0
+
+# A vertex references at most four bones. Anything above that is a desynchronised stream
+# rather than real skinning, and has to fail the LOD instead of over-reading the block.
+MAX_VERTEX_BONES = 4
+
+# vertexBoneRef entry: uint32 weight count, then four (uint8 bone index, uint8 weight)
+# pairs, always 12 bytes whether or not vertexBoneRefIsSimple is set. Measured on both
+# 55galDrum.p3d (simple, every vertex a single full weight) and BDU_Jacket_f.p3d (up to
+# four weights per vertex); in both the block decodes cleanly as count * 12 bytes.
+VERTEX_BONE_REF_SIZE = 12
+
+
+# Reads the vertexBoneRef block into one (bone index, weight float) list per vertex. The
+# bone index is into the LOD's subSkeletonsToSkeleton table, not the skeleton directly.
+def read_vertex_bone_ref(file, file_size):
+    count = read_count(file, file_size, "vertex bone ref")
+    raw = read_compressed_array(file, VERTEX_BONE_REF_SIZE, count)
+    if len(raw) < VERTEX_BONE_REF_SIZE * count:
+        raise ODOL_Error("Vertex bone ref array is %d bytes, expected %d"
+                         % (len(raw), VERTEX_BONE_REF_SIZE * count))
+
+    vertex_bones = []
+    for i in range(count):
+        base = i * VERTEX_BONE_REF_SIZE
+        weight_count = struct.unpack_from("<I", raw, base)[0]
+        if weight_count > MAX_VERTEX_BONES:
+            raise ODOL_Error("Vertex references %d bones, at most %d exist (stream desynchronised)"
+                             % (weight_count, MAX_VERTEX_BONES))
+
+        pairs = []
+        for k in range(weight_count):
+            bone = raw[base + 4 + 2 * k]
+            weight = raw[base + 4 + 2 * k + 1]
+            pairs.append((bone, weight / WEIGHT_SCALE))
+
+        vertex_bones.append(pairs)
+
+    return vertex_bones
+
+
+# Joins the vertexBoneRef skinning onto the named selections. A selection whose name is a
+# skeleton bone gets every vertex bound to that bone, with the bound weight; the rest keep
+# their faces and nothing else. The bone index carried per vertex is resolved through the
+# LOD's subSkeletonsToSkeleton table and then the model's skeleton bone list.
+def assign_bone_weights(selections, vertex_bones, sub_skeleton, bones):
+    if not bones or not sub_skeleton:
+        return
+
+    bone_index = {name: index for index, name in enumerate(bones)}
+
+    per_bone = {}
+    for vertex, pairs in enumerate(vertex_bones):
+        for sub_index, weight in pairs:
+            if sub_index >= len(sub_skeleton):
+                continue
+
+            per_bone.setdefault(sub_skeleton[sub_index], []).append((vertex, weight))
+
+    for selection in selections:
+        skeleton_index = bone_index.get(selection.name)
+        bound = per_bone.get(skeleton_index)
+        if bound is None:
+            continue
+
+        selection.vertices = [vertex for vertex, _ in bound]
+        selection.weights = [weight for _, weight in bound]
+
+
 # One LOD body, read strictly in stream order. Everything up to sizeOfRestData is a
 # single sequential walk in which no field is addressable, so a mis-sized field does
 # not fail where it happens, it fails somewhere arbitrary later on. sizeOfRestData is
@@ -486,6 +588,7 @@ class ODOL_LOD():
         self.textures = []
         self.materials = []
         self.sections = []
+        self.named_selections = []
         self.properties = {}
         # bbox_min, bbox_max and bbox_center are in the same frame as the vertices,
         # which is what makes them a usable check on the decompressed vertex stream.
@@ -498,7 +601,7 @@ class ODOL_LOD():
         self.resolution = 0.0
 
     @classmethod
-    def read(cls, file, version, end, file_size):
+    def read(cls, file, version, end, file_size, bones = ()):
         output = cls()
 
         count_proxies = read_count(file, file_size, "proxy")
@@ -507,8 +610,11 @@ class ODOL_LOD():
             file.seek(4 * 12, 1)        # transform
             file.seek(4 * 4, 1)         # sequence, named selection, bone and section indices
 
+        # subSkeletonsToSkeleton: a vertexBoneRef bone index is an index into this table,
+        # and the value it holds is the index into the model's skeleton bone list. Kept so
+        # the skinning can be resolved back to bone names when the weights are assigned.
         count = read_count(file, file_size, "sub skeleton")
-        file.seek(4 * count, 1)         # sub skeletons to skeleton
+        sub_skeleton = list(binary.read_ulongs(file, count)) if count else []
 
         count = read_count(file, file_size, "skeleton bone")
         for _ in range(count):
@@ -575,15 +681,29 @@ class ODOL_LOD():
         count_sections = read_count(file, file_size, "section")
         output.sections = [read_section(file, offsets, file_size) for _ in range(count_sections)]
 
+        face_format = "<%dI" if index_size == 4 else "<%dH"
+
         count_selections = read_count(file, file_size, "named selection")
         for _ in range(count_selections):
-            binary.read_asciiz(file)    # name
-            read_compressed_array(file, index_size, read_count(file, file_size, "selected face"))
+            selection = ODOL_NamedSelection(binary.read_asciiz(file))
+
+            count_selected_faces = read_count(file, file_size, "selected face")
+            face_raw = read_compressed_array(file, index_size, count_selected_faces)
+            if len(face_raw) < index_size * count_selected_faces:
+                raise ODOL_Error("Selected face array is %d bytes, expected %d"
+                                 % (len(face_raw), index_size * count_selected_faces))
+            selection.faces = list(struct.unpack(face_format % count_selected_faces, face_raw)) if count_selected_faces else []
+
             file.seek(4, 1)             # always zero
             file.seek(1, 1)             # is sectional
             read_compressed_array(file, 4, read_count(file, file_size, "selected section"))
+            # In DayZ v54 these two arrays are always empty; the skinning lives in
+            # vertexBoneRef and is joined on below. They are still read to advance the
+            # cursor, and honoured if a file ever does carry them inline.
             read_compressed_array(file, index_size, read_count(file, file_size, "selected vertex"))
             read_compressed_array(file, 1, read_count(file, file_size, "selection weight"))
+
+            output.named_selections.append(selection)
 
         count_properties = read_count(file, file_size, "named property")
         for _ in range(count_properties):
@@ -625,8 +745,18 @@ class ODOL_LOD():
         raw = read_condensed_array(file, 4, file_size)  # normals
         output.normals = [decode_normal(value) for value in struct.unpack("<%dI" % (len(raw) // 4), raw)]
 
-        # Everything past here (ST coordinates, bone references) is unused by the
-        # importer, and the LOD end address already bounds it, so it is not read.
+        # ST coordinates (two packed normals, 8 bytes per vertex) sit between the normals
+        # and vertexBoneRef. They are unused by the importer, but have to be walked past to
+        # reach the skinning; the count precedes them exactly like the vertex array's does.
+        read_compressed_array(file, 8, read_count(file, file_size, "ST coordinate"))
+
+        # vertexBoneRef: the per-vertex skinning DayZ v54 keeps out of the named selection
+        # member. One 12-byte entry per vertex, joined onto the bone selections below.
+        vertex_bones = read_vertex_bone_ref(file, file_size)
+        assign_bone_weights(output.named_selections, vertex_bones, sub_skeleton, bones)
+
+        # neighborBoneRef follows, but nothing past the skinning is used and the LOD end
+        # address already bounds it, so it is not read.
 
         if output.vertices and len(output.uvs) != len(output.vertices):
             raise ODOL_Error("LOD has %d vertices but %d UV pairs" % (len(output.vertices), len(output.uvs)))
@@ -659,6 +789,7 @@ class ODOL_File():
     def __init__(self):
         self.version = 0
         self.offset = 0
+        self.bones = []
         self.resolutions = []
         self.lod_starts = []
         self.lod_ends = []
@@ -696,7 +827,7 @@ class ODOL_File():
         # where the decompressor's file.read(1)[0] raises IndexError, not EOFError.
         # Every failure on malformed input has to leave ODOL_File.read as ODOL_Error.
         try:
-            skip_model_info(file, output.version, file_size)
+            output.bones = skip_model_info(file, output.version, file_size)
         except (IndexError, EOFError, ValueError, struct.error, compression.LZO_Error) as ex:
             raise ODOL_Error("Failed to read past ModelInfo: %s" % ex) from ex
 
@@ -709,7 +840,7 @@ class ODOL_File():
         for index, (start, end) in enumerate(zip(output.lod_starts, output.lod_ends)):
             try:
                 file.seek(start)
-                lod = ODOL_LOD.read(file, output.version, end, file_size)
+                lod = ODOL_LOD.read(file, output.version, end, file_size, output.bones)
                 lod.index = index
                 lod.resolution = output.resolutions[index]
                 output.lods.append(lod)

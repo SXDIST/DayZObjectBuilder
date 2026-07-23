@@ -25,6 +25,10 @@ HANGAR = r"P:\DZ\structures_sakhal\military\tisy\proxy\Tisy_BigHangar_A_Grass_R.
 # large enough to be LZO compressed, which is the only way to cover that branch.
 HOUSE = r"P:\DZ\structures_sakhal\residential\houses\House_1W02_Blue.p3d"
 
+# The skinned garment: its visual LODs carry named selections with per-vertex bone
+# weights, which is the only file in this set that exercises the weight-byte decode.
+JACKET = r"P:\DZ\characters\tops\BDU_Jacket_f.p3d"
+
 
 COUNT_LODS = 2
 BODY = 8000  # per LOD, so that addresses are as large as they are in real models
@@ -413,6 +417,90 @@ class TestLODBody(unittest.TestCase):
         self.assertGreater(outward, 3 * inward)
 
 
+@unittest.skipUnless(os.path.isfile(JACKET), "test corpus not available")
+class TestNamedSelections(unittest.TestCase):
+    def read_jacket(self):
+        with open(JACKET, "rb") as file:
+            return odol.ODOL_File.read(file)
+
+    def test_garment_has_named_selections_with_valid_weights(self):
+        model = self.read_jacket()
+        lod = model.lods[0]
+        self.assertGreater(len(lod.named_selections), 0)
+
+        for selection in lod.named_selections:
+            self.assertTrue(selection.name)
+            for weight in selection.weights:
+                self.assertGreaterEqual(weight, 0.0)
+                self.assertLessEqual(weight, 1.0)
+            for index in selection.vertices:
+                self.assertLess(index, len(lod.vertices))
+            for index in selection.faces:
+                self.assertLess(index, len(lod.faces))
+
+    def test_weights_align_with_selected_vertices(self):
+        # Every selection that carries weights carries exactly one per selected
+        # vertex; a mismatch means the weight array was read at the wrong width or
+        # the vertex array desynchronised.
+        for lod in self.read_jacket().lods:
+            for selection in lod.named_selections:
+                if selection.weights:
+                    self.assertEqual(len(selection.weights), len(selection.vertices))
+
+    def test_a_fully_bound_vertex_reaches_weight_one(self):
+        # The decisive check on the byte-to-weight mapping. A garment rigged to a
+        # skeleton has vertices bound wholly to one bone, and those must decode to
+        # exactly 1.0. Measured on this file, a fully bound vertex carries the weight
+        # byte 255 and its weights sum to 255, so the mapping is byte / 255 and the
+        # peak lands on 1.0. A wrong scale (or the MLOD selection-tagg encoding, where
+        # full binding is the byte 1) would not put the peak here.
+        peak = 0.0
+        for lod in self.read_jacket().lods:
+            for selection in lod.named_selections:
+                for weight in selection.weights:
+                    peak = max(peak, weight)
+
+        self.assertAlmostEqual(peak, 1.0, places = 6)
+
+    def test_every_weighted_vertex_sums_to_one(self):
+        # The strongest cross-check on the whole join and the byte/255 scale together.
+        # A vertexBoneRef entry partitions 255 across its bones, so once the weights are
+        # spread over the bone selections, every vertex that is skinned at all must have
+        # its per-selection weights add back up to 1.0. A wrong scale, a misread bone
+        # index, or a dropped weight would break the sum.
+        for lod in self.read_jacket().lods:
+            totals = {}
+            for selection in lod.named_selections:
+                for vertex, weight in zip(selection.vertices, selection.weights):
+                    totals[vertex] = totals.get(vertex, 0.0) + weight
+
+            for vertex, total in totals.items():
+                self.assertAlmostEqual(total, 1.0, places = 6)
+
+    def test_first_lod_matches_measured_values(self):
+        # Pinned against BDU_Jacket_f.p3d so the reconstruction cannot pass by being
+        # merely self-consistent. LOD 0 has 31 named selections, 28 of them skeleton
+        # bones that pick up per-vertex weights and 3 hidden selections (camofemale,
+        # zbytek, falloff) that carry faces only.
+        lod = self.read_jacket().lods[0]
+        by_name = {selection.name: selection for selection in lod.named_selections}
+
+        self.assertEqual(len(lod.named_selections), 31)
+        self.assertEqual(sum(1 for s in lod.named_selections if s.vertices), 28)
+
+        # A bone selection: faces from the member, vertices and weights from the join.
+        spine = by_name["spine"]
+        self.assertEqual(len(spine.faces), 316)
+        self.assertEqual(len(spine.vertices), 401)
+        self.assertEqual(len(spine.weights), len(spine.vertices))
+
+        # A hidden (texture) selection covering every face and no vertices.
+        camo = by_name["camofemale"]
+        self.assertEqual(len(camo.faces), len(lod.faces))
+        self.assertEqual(camo.vertices, [])
+        self.assertEqual(camo.weights, [])
+
+
 @unittest.skipUnless(os.path.isfile(RAIL), "test corpus not available")
 class TestLZOVariant(unittest.TestCase):
     """Which LZO1X variant ODOL uses, pinned against a model that can tell them apart.
@@ -544,6 +632,9 @@ CORPUS_GUARANTEES = (
            "distinguish them, so without it the variant is assumed, not verified"),
     (HANGAR, "TestFaceIndexWidth (Tisy_BigHangar_A_Grass_R.p3d) - that face indices widen at 65535 "
              "vertices and not at 32767, which only a LOD sitting between the two can show"),
+    (JACKET, "TestNamedSelections (BDU_Jacket_f.p3d) - named selections and the per-vertex bone "
+             "weight decode. DayZ v54 keeps the skinning in vertexBoneRef, not in the named "
+             "selection member, and the weight byte maps as byte/255; only a rigged garment shows it"),
 )
 
 
