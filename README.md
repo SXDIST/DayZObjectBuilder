@@ -24,7 +24,7 @@ It is a **DayZ**-focused fork of [**Arma 3 Object Builder**](https://github.com/
 
 | Format | Notes |
 | ------ | ----- |
-| **P3D** models | Full round-trip, plus direct **binarized (ODOL)** import |
+| **P3D** models | Full round-trip, plus direct **binarized (ODOL)** import — [please read this first](#using-odol-import-responsibly) |
 | **XOB** models | Import of the Enfusion binary format — armature, mesh, skin weights, UVs and materials |
 | **ANM** animations | Import **and** export of the Enfusion animation format |
 | **ASC** terrain | Heightfields |
@@ -46,12 +46,28 @@ All entries are grouped under a single **DayZ** submenu in `File ▸ Import` / `
 - Proxy, mass, hit point, rigging and validation tools
 - Assorted utility functions and scripts
 
+## Using ODOL import responsibly
+
+> [!CAUTION]
+> **Do not use binarized model import to steal other people's work.**
+>
+> Opening a binarized model is not a licence to republish it. Ripping vanilla or third-party content out of the game and shipping it — as your own mod, on a workshop page, or anywhere else — is theft, whether it is Bohemia's content or another modder's. Repackaging it, renaming it, or lightly editing it does not make it yours.
+>
+> Nothing in this add-on can enforce that. Once a model is open in Blender, what happens next is entirely down to the person at the keyboard. I am relying on people to be decent about it.
+
+**This feature exists for reference, not for extraction.** It was added for two concrete jobs:
+
+- **Reading proxy placement.** Seeing how existing models position and orient their proxies, so your own attachment points line up the way the engine actually expects.
+- **Fitting clothing to the DayZ character.** Checking a garment against the real body proportions, and against the *other* clothing it has to layer with, so a vest sits correctly over a shirt instead of clipping through it.
+
+Look at the reference, then build your own asset. That is the workflow this was written for, and the one I would ask you to stay inside.
+
 ## Changes in this fork
 
 - **Windows long path support.** Paths over the 260 character `MAX_PATH` limit are opened through the extended-length API. Unpacked game asset trees routinely exceed it, especially once the temporary suffix is appended during export.
 - **Import and export errors are reported, not raised.** Failures surface as an operator error with the traceback in the system console, instead of an unhandled Blender popup.
 - **Texture and RVMAT auto-search.** Point the add-on at a mod root and it resolves the face texture and bound RVMAT for a material from its Base Color image. RVMAT candidates are ranked by whether they actually reference the resolved `.paa`, so sets whose normal map is named differently from the color map still match.
-- **Binarized (ODOL) P3D import.** Binarized models open directly through the normal P3D import, with no external debinarizer. Conversion is lossy and one way: the add-on never writes ODOL, and a re-exported model is degraded relative to the original source.
+- **Binarized (ODOL) P3D import.** Binarized models open directly through the normal P3D import, with no external debinarizer. Conversion is lossy and one way: the add-on never writes ODOL, and a re-exported model is degraded relative to the original source. It is meant for reference work — see [Using ODOL import responsibly](#using-odol-import-responsibly).
 - **Native Enfusion format support.** `.xob` models and `.anm` animations are read directly, and `.anm` can be written back out — so an animation retargeted onto the DayZ rig in Blender can be taken back into the game. Both readers were validated against DayZATool's output.
 - **DayZ instead of Arma 3 throughout.** Arma-only RTM/BMTR animation support is gone, the Arma 3 Tools integration is now DayZ Tools, and the bundled presets (proxies, penetration materials, rigging skeleton) point at the DayZ data set.
 - **LOD generation built in.** The formerly separate DayZ LOD Tools add-on is merged in as the Auto LODs Generator, so it no longer has to bridge back into this add-on from the outside.
