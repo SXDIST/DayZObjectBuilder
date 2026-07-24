@@ -10,7 +10,7 @@ from . import compat as computils
 
 
 def clear_components(obj):
-    re_component = re.compile("component\d+", re.IGNORECASE)
+    re_component = re.compile(r"component\d+", re.IGNORECASE)
     vgroups = [group for group in obj.vertex_groups if re_component.match(group.name)]
     while vgroups:
         obj.vertex_groups.remove(vgroups.pop())

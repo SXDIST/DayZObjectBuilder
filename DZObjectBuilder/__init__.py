@@ -260,7 +260,7 @@ class DZOB_AT_preferences(bpy.types.AddonPreferences):
     )
     project_root: bpy.props.StringProperty(
         name = "Project Root",
-        description = "Root directory of the project (should be P:\ for most cases)",
+        description = "Root directory of the project (should be P:\\ for most cases)",
         default = "P:\\",
         subtype = 'DIR_PATH'
     )

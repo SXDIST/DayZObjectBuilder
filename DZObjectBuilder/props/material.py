@@ -53,8 +53,8 @@ class DZOB_PG_properties_material(bpy.types.PropertyGroup):
     # )
     
     def from_p3d(self, texture, material, absolute):
-        regex_procedural = "#\(.*?\)\w+\(.*?\)"
-        regex_procedural_color = "#\(argb,\d+,\d+,\d+\)color\((\d+.?\d*),(\d+.?\d*),(\d+.?\d*),(\d+.?\d*),([a-zA-Z]+)\)"
+        regex_procedural = r"#\(.*?\)\w+\(.*?\)"
+        regex_procedural_color = r"#\(argb,\d+,\d+,\d+\)color\((\d+.?\d*),(\d+.?\d*),(\d+.?\d*),(\d+.?\d*),([a-zA-Z]+)\)"
         
         if re.match(regex_procedural, texture):
             texture = texture.replace(" ", "") # remove spaces to simplify regex parsing

@@ -252,7 +252,7 @@ class ValidatorLODGeometry(ValidatorComponentLOD):
     def has_components(self):
         result = ValidatorResult()
 
-        if not self.has_selection_internal("component\d+"):
+        if not self.has_selection_internal(r"component\d+"):
             result.set(False, "mesh has no component selections")
         
         return result
@@ -294,7 +294,7 @@ class ValidatorLODGeometry(ValidatorComponentLOD):
             self.is_convex,
             self.has_mass
         )
-        if not self.has_selection_internal("occluder\d+"):
+        if not self.has_selection_internal(r"occluder\d+"):
             strict = (
                 self.is_contiguous,
                 self.has_components,
@@ -318,7 +318,7 @@ class ValidatorLODGeometrySubtype(ValidatorLODGeometry):
         strict = (
             self.is_convex,
         )
-        if not self.has_selection_internal("occluder\d+"):
+        if not self.has_selection_internal(r"occluder\d+"):
             strict = (
                 self.is_contiguous,
                 self.has_components,
@@ -571,7 +571,7 @@ class ValidatorLODPaths(ValidatorComponentLOD):
     def has_entry(self):
         result = ValidatorResult()
 
-        if not self.has_selection_internal("in\d+"):
+        if not self.has_selection_internal(r"in\d+"):
             result.set(False, "mesh has no entry points assigned")
         
         return result
@@ -579,7 +579,7 @@ class ValidatorLODPaths(ValidatorComponentLOD):
     def has_position(self):
         result = ValidatorResult()
 
-        if not self.has_selection_internal("in\d+"):
+        if not self.has_selection_internal(r"in\d+"):
             result.set(False, "mesh has no position points assigned")
         
         return result
