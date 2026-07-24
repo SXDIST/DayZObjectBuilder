@@ -6,10 +6,10 @@ from ..utilities.validator import Validator
 from ..utilities.logger import ProcessLogger
 
 
-class A3OB_OT_validate_lod(bpy.types.Operator):
+class DZOB_OT_validate_lod(bpy.types.Operator):
     """Validate the selected object for the requirements of the set LOD type"""
     
-    bl_idname = "a3ob.validate_for_lod"
+    bl_idname = "dzob.validate_for_lod"
     bl_label = "Validate LOD"
     bl_options = {'REGISTER', 'UNDO'}
     
@@ -50,7 +50,7 @@ class A3OB_OT_validate_lod(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_PT_validation(bpy.types.Panel):
+class DZOB_PT_validation(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = "Object Builder"
@@ -79,12 +79,12 @@ class A3OB_PT_validation(bpy.types.Panel):
         layout.prop(scene_props, "relative_paths")
             
         layout.separator()
-        layout.operator("a3ob.validate_for_lod", text="Validate", icon_value=get_icon("op_validate"))
+        layout.operator("dzob.validate_for_lod", text="Validate", icon_value=get_icon("op_validate"))
         
 
 classes = (
-    A3OB_OT_validate_lod,
-    A3OB_PT_validation,
+    DZOB_OT_validate_lod,
+    DZOB_PT_validation,
 )
 
 

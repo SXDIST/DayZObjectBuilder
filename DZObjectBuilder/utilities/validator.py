@@ -252,7 +252,7 @@ class ValidatorLODGeometry(ValidatorComponentLOD):
     def has_components(self):
         result = ValidatorResult()
 
-        if not self.has_selection_internal("component\d+"):
+        if not self.has_selection_internal(r"component\d+"):
             result.set(False, "mesh has no component selections")
         
         return result
@@ -294,7 +294,7 @@ class ValidatorLODGeometry(ValidatorComponentLOD):
             self.is_convex,
             self.has_mass
         )
-        if not self.has_selection_internal("occluder\d+"):
+        if not self.has_selection_internal(r"occluder\d+"):
             strict = (
                 self.is_contiguous,
                 self.has_components,
@@ -318,7 +318,7 @@ class ValidatorLODGeometrySubtype(ValidatorLODGeometry):
         strict = (
             self.is_convex,
         )
-        if not self.has_selection_internal("occluder\d+"):
+        if not self.has_selection_internal(r"occluder\d+"):
             strict = (
                 self.is_contiguous,
                 self.has_components,
@@ -571,7 +571,7 @@ class ValidatorLODPaths(ValidatorComponentLOD):
     def has_entry(self):
         result = ValidatorResult()
 
-        if not self.has_selection_internal("in\d+"):
+        if not self.has_selection_internal(r"in\d+"):
             result.set(False, "mesh has no entry points assigned")
         
         return result
@@ -579,7 +579,7 @@ class ValidatorLODPaths(ValidatorComponentLOD):
     def has_position(self):
         result = ValidatorResult()
 
-        if not self.has_selection_internal("in\d+"):
+        if not self.has_selection_internal(r"in\d+"):
             result.set(False, "mesh has no position points assigned")
         
         return result
@@ -665,28 +665,6 @@ class ValidatorSkeletonGeneric(ValidatorComponentSkeleton):
         return strict, optional, info
 
 
-class ValidatorSkeletonRTM(ValidatorComponentSkeleton):
-    """Skeleton - RTM"""
-
-    def has_rtm_compatible_bones(self):
-        result = ValidatorResult()
-
-        for bone in self.skeleton.bones:
-            if len(bone.name) > 31 or len(bone.parent) > 31:
-                result.set(False, "skeleton has bone names longer than 31 characters")
-                break
-
-        return result
-
-    def conditions(self):
-        strict = (
-            self.has_rtm_compatible_bones,
-        )
-        optional = info = ()
-
-        return strict, optional, info
-
-
 class Validator():
     def __init__(self, logger):
         self.logger = logger
@@ -758,13 +736,11 @@ class Validator():
 
         return is_valid
     
-    def validate_skeleton(self, skeleton, for_rtm = False, lazy = False):
+    def validate_skeleton(self, skeleton, lazy = False):
         self.logger.start_subproc("Validating %s" % skeleton.name)
 
         is_valid = True
         components = [ValidatorSkeletonGeneric]
-        if for_rtm:
-            components.append(ValidatorSkeletonRTM)
 
         for item in components:
             is_valid &= item(skeleton, self.logger).validate(lazy, False)

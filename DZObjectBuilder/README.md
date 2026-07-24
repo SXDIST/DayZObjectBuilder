@@ -1,13 +1,12 @@
 # DayZ Object Builder
 
-DayZ Object Builder (DZOB) is a free add-on for Blender to help content development for DayZ and Arma. It is a fork of [Arma 3 Object Builder](https://github.com/MrClock8163/Arma3ObjectBuilder) by MrClock, which in turn is based on the ideas of the [ArmAToolbox](https://github.com/AlwarrenSidh/ArmAToolbox) add-on developed by Alwarren.
+DayZ Object Builder (DZOB) is a free add-on for Blender to help content development for DayZ. It is a fork of [Arma 3 Object Builder](https://github.com/MrClock8163/Arma3ObjectBuilder) by MrClock, which in turn is based on the ideas of the [ArmAToolbox](https://github.com/AlwarrenSidh/ArmAToolbox) add-on developed by Alwarren.
 
 ## Main features
 
 - P3D import-export
 - Binarized (ODOL) P3D import
 - ASC import-export
-- RTM import-export
 - PAA import
 - skeleton import-export (model.cfg)
 - object list import-export (for Terrain Builder)
@@ -25,14 +24,14 @@ DayZ Object Builder (DZOB) is a free add-on for Blender to help content developm
 
 ## Documentation
 
-The add-on keeps the operator, property and panel identifiers of the upstream project, so the upstream documentation on [GitBook](https://mrcmodding.gitbook.io/arma-3-object-builder/home) applies to DZOB as well. Features added in this fork are documented in this repository.
+The add-on keeps the `.blend` custom-property identifiers of the upstream project (so existing files keep working), while operator and panel identifiers have been renamed to the DZOB namespace. The workflow and panel layout stay close to upstream, so the documentation on [GitBook](https://mrcmodding.gitbook.io/arma-3-object-builder/home) still describes most of DZOB accurately. Features added in this fork are documented in this repository.
 
 ## Installation
 
 The add-on can be installed after either downloading a packaged release, or cloning the repository and manually packing it.
 For information about add-on installation, visit the official [Blender documentation](https://docs.blender.org/manual/en/latest/editors/preferences/addons.html) page about add-ons.
 
-DZOB is not published on the Blender Extensions repository. It registers the same operator and property identifiers as Arma 3 Object Builder, so the two add-ons cannot be enabled at the same time.
+DZOB is not published on the Blender Extensions repository. It registers the same `.blend` custom-property identifiers as Arma 3 Object Builder, so the two add-ons cannot be enabled at the same time.
 
 ## License
 

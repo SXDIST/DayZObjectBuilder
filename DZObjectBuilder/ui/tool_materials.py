@@ -8,10 +8,10 @@ from ..utilities import materials as matutils
 from ..utilities import texsearch
 
 
-class A3OB_OT_material_autosearch_rebuild(bpy.types.Operator):
+class DZOB_OT_material_autosearch_rebuild(bpy.types.Operator):
     """Rebuild the cached texture/RVMAT index for the mod root"""
 
-    bl_idname = "a3ob.material_autosearch_rebuild"
+    bl_idname = "dzob.material_autosearch_rebuild"
     bl_label = "Rebuild Index"
     bl_options = {'REGISTER'}
 
@@ -33,10 +33,10 @@ class A3OB_OT_material_autosearch_rebuild(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_material_autosearch_batch(bpy.types.Operator):
+class DZOB_OT_material_autosearch_batch(bpy.types.Operator):
     """Auto-search textures and RVMATs for all materials of the selected objects"""
 
-    bl_idname = "a3ob.material_autosearch_batch"
+    bl_idname = "dzob.material_autosearch_batch"
     bl_label = "Auto Search Selected"
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -78,10 +78,10 @@ class A3OB_OT_material_autosearch_batch(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_materials_templates_generate(bpy.types.Operator):
+class DZOB_OT_materials_templates_generate(bpy.types.Operator):
     """Generate RVMAT from selected template"""
 
-    bl_idname = "a3ob.materials_templates_generate"
+    bl_idname = "dzob.materials_templates_generate"
     bl_label = "Generate"
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -109,10 +109,10 @@ class A3OB_OT_materials_templates_generate(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_materials_templates_reload(bpy.types.Operator):
+class DZOB_OT_materials_templates_reload(bpy.types.Operator):
     """Load/Reload material templates"""
     
-    bl_idname = "a3ob.materials_templates_reload"
+    bl_idname = "dzob.materials_templates_reload"
     bl_label = "Refresh Templates"
     bl_options = {'REGISTER', 'UNDO'}
     
@@ -137,12 +137,12 @@ class A3OB_OT_materials_templates_reload(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_UL_materials_templates(bpy.types.UIList):
+class DZOB_UL_materials_templates(bpy.types.UIList):
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname):
         layout.label(text=item.name, icon='TEXT')
 
 
-class A3OB_PT_materials(bpy.types.Panel):
+class DZOB_PT_materials(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = "Object Builder"
@@ -158,12 +158,12 @@ class A3OB_PT_materials(bpy.types.Panel):
         pass
 
 
-class A3OB_PT_materials_colors(bpy.types.Panel):
+class DZOB_PT_materials_colors(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = "Object Builder"
     bl_label = "Colors"
-    bl_parent_id = "A3OB_PT_materials"
+    bl_parent_id = "DZOB_PT_materials"
     bl_options = {'DEFAULT_CLOSED'}
 
     def draw(self, context):
@@ -207,12 +207,12 @@ class A3OB_PT_materials_colors(bpy.types.Panel):
             layout.prop(scene_props, "output_linear", text="")
 
 
-class A3OB_PT_materials_templates(bpy.types.Panel):
+class DZOB_PT_materials_templates(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = "Object Builder"
     bl_label = "Templates"
-    bl_parent_id = "A3OB_PT_materials"
+    bl_parent_id = "DZOB_PT_materials"
     bl_options = {'DEFAULT_CLOSED'}
 
     def draw(self, context):
@@ -220,23 +220,23 @@ class A3OB_PT_materials_templates(bpy.types.Panel):
         scene_props = context.scene.a3ob_materials
 
         col_list = layout.column(align=True)
-        col_list.template_list("A3OB_UL_materials_templates", "A3OB_materials_templates", scene_props, "templates", scene_props, "templates_index", item_dyntip_propname="path")
-        col_list.operator("a3ob.materials_templates_reload", icon_value=get_icon("op_refresh"))
+        col_list.template_list("DZOB_UL_materials_templates", "DZOB_materials_templates", scene_props, "templates", scene_props, "templates_index", item_dyntip_propname="path")
+        col_list.operator("dzob.materials_templates_reload", icon_value=get_icon("op_refresh"))
 
         layout.prop(scene_props, "folder")
         layout.prop(scene_props, "basename")
         layout.prop(scene_props, "check_files_exist")
         layout.prop(scene_props, "overwrite_existing")
 
-        layout.operator("a3ob.materials_templates_generate", icon='EXPORT')
+        layout.operator("dzob.materials_templates_generate", icon='EXPORT')
 
 
-class A3OB_PT_materials_autosearch(bpy.types.Panel):
+class DZOB_PT_materials_autosearch(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = "Object Builder"
     bl_label = "Texture Auto-Search"
-    bl_parent_id = "A3OB_PT_materials"
+    bl_parent_id = "DZOB_PT_materials"
     bl_options = {'DEFAULT_CLOSED'}
 
     def draw(self, context):
@@ -245,24 +245,24 @@ class A3OB_PT_materials_autosearch(bpy.types.Panel):
 
         row_root = layout.row(align=True)
         row_root.prop(scene_props, "mod_root")
-        row_root.operator("a3ob.material_autosearch_rebuild", text="", icon_value=get_icon("op_refresh"))
+        row_root.operator("dzob.material_autosearch_rebuild", text="", icon_value=get_icon("op_refresh"))
 
         layout.prop(scene_props, "search_source_textures")
         layout.prop(scene_props, "overwrite_existing_paths")
 
-        layout.operator("a3ob.material_autosearch_batch", icon='VIEWZOOM')
+        layout.operator("dzob.material_autosearch_batch", icon='VIEWZOOM')
 
 
 classes = (
-    A3OB_OT_material_autosearch_rebuild,
-    A3OB_OT_material_autosearch_batch,
-    A3OB_OT_materials_templates_generate,
-    A3OB_OT_materials_templates_reload,
-    A3OB_UL_materials_templates,
-    A3OB_PT_materials,
-    A3OB_PT_materials_colors,
-    A3OB_PT_materials_templates,
-    A3OB_PT_materials_autosearch
+    DZOB_OT_material_autosearch_rebuild,
+    DZOB_OT_material_autosearch_batch,
+    DZOB_OT_materials_templates_generate,
+    DZOB_OT_materials_templates_reload,
+    DZOB_UL_materials_templates,
+    DZOB_PT_materials,
+    DZOB_PT_materials_colors,
+    DZOB_PT_materials_templates,
+    DZOB_PT_materials_autosearch
 )
 
 

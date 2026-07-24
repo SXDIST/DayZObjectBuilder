@@ -7,10 +7,10 @@ from ..utilities.validator import Validator
 from ..utilities.logger import ProcessLoggerNull
 
 
-class A3OB_OP_import_mcfg(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
-    """Import Arma 3 skeleton definition"""
+class DZOB_OP_import_mcfg(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
+    """Import skeleton definition"""
 
-    bl_idname = "a3ob.import_mcfg"
+    bl_idname = "dzob.import_mcfg"
     bl_label = "Import Skeletons"
     bl_options = {'REGISTER', 'UNDO', 'PRESET'}
     filename_ext = ".cfg"
@@ -49,7 +49,7 @@ class A3OB_OP_import_mcfg(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
         return {'FINISHED'}
 
 
-class A3OB_PT_import_mcfg_main(bpy.types.Panel):
+class DZOB_PT_import_mcfg_main(bpy.types.Panel):
     bl_space_type = 'FILE_BROWSER'
     bl_region_type = 'TOOL_PROPS'
     bl_label = "Main"
@@ -61,7 +61,7 @@ class A3OB_PT_import_mcfg_main(bpy.types.Panel):
         sfile = context.space_data
         operator = sfile.active_operator
         
-        return operator.bl_idname == "A3OB_OT_import_mcfg"
+        return operator.bl_idname == "DZOB_OT_import_mcfg"
     
     def draw(self, context):
         layout = self.layout
@@ -72,10 +72,10 @@ class A3OB_PT_import_mcfg_main(bpy.types.Panel):
         layout.prop(operator, "protected")
 
 
-class A3OB_OP_export_mcfg(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
-    """Export Arma 3 skeleton definition"""
+class DZOB_OP_export_mcfg(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
+    """Export skeleton definition"""
 
-    bl_idname = "a3ob.export_mcfg"
+    bl_idname = "dzob.export_mcfg"
     bl_label = "Export Skeleton"
     bl_options = {'REGISTER', 'UNDO', 'PRESET'}
     filename_ext = ".cfg"
@@ -118,7 +118,7 @@ class A3OB_OP_export_mcfg(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
         return {'FINISHED'}
 
 
-class A3OB_PT_export_mcfg_main(bpy.types.Panel):
+class DZOB_PT_export_mcfg_main(bpy.types.Panel):
     bl_space_type = 'FILE_BROWSER'
     bl_region_type = 'TOOL_PROPS'
     bl_label = "Main"
@@ -130,7 +130,7 @@ class A3OB_PT_export_mcfg_main(bpy.types.Panel):
         sfile = context.space_data
         operator = sfile.active_operator
         
-        return operator.bl_idname == "A3OB_OT_export_mcfg"
+        return operator.bl_idname == "DZOB_OT_export_mcfg"
 
     def draw(self, context):
         layout = self.layout
@@ -138,45 +138,34 @@ class A3OB_PT_export_mcfg_main(bpy.types.Panel):
         operator = sfile.active_operator
         scene_props = context.scene.a3ob_rigging
 
-        layout.template_list("A3OB_UL_rigging_skeletons_noedit", "A3OB_armature_skeletons", scene_props, "skeletons", operator, "skeleton_index", rows=3)
+        layout.template_list("DZOB_UL_rigging_skeletons_noedit", "DZOB_armature_skeletons", scene_props, "skeletons", operator, "skeleton_index", rows=3)
         layout.prop(operator, "force_lowercase")
 
 
 classes = (
-    A3OB_OP_import_mcfg,
-    A3OB_PT_import_mcfg_main,
-    A3OB_OP_export_mcfg,
-    A3OB_PT_export_mcfg_main
+    DZOB_OP_import_mcfg,
+    DZOB_PT_import_mcfg_main,
+    DZOB_OP_export_mcfg,
+    DZOB_PT_export_mcfg_main
 )
 
 if bpy.app.version >= (4, 1, 0):
-    class A3OB_FH_import_mcfg(bpy.types.FileHandler):
+    class DZOB_FH_import_mcfg(bpy.types.FileHandler):
         bl_label = "File handler for MCFG import"
-        bl_import_operator = "a3ob.import_mcfg"
+        bl_import_operator = "dzob.import_mcfg"
         bl_file_extensions = ".cfg"
     
         @classmethod
         def poll_drop(cls, context):
             return context.area and context.area.type == 'VIEW_3D'
 
-    classes = (*classes, A3OB_FH_import_mcfg)
-
-
-def menu_func_import(self, context):
-    self.layout.operator(A3OB_OP_import_mcfg.bl_idname, text="Arma 3 skeletons (model.cfg)")
-
-
-def menu_func_export(self, context):
-    self.layout.operator(A3OB_OP_export_mcfg.bl_idname, text="Arma 3 skeleton (model.cfg)")
+    classes = (*classes, DZOB_FH_import_mcfg)
 
 
 def register():
     for cls in classes:
         bpy.utils.register_class(cls)
         
-    bpy.types.TOPBAR_MT_file_import.append(menu_func_import)
-    bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
-    
     print("\t" + "UI: MCFG Import / Export")
 
 
@@ -184,7 +173,4 @@ def unregister():
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
         
-    bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)
-    bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)
-    
     print("\t" + "UI: MCFG Import / Export")

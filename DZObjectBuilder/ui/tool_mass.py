@@ -7,10 +7,10 @@ from ..utilities import generic as utils
 from ..utilities import masses as massutils
 
 
-class A3OB_OT_vertex_mass_set(bpy.types.Operator):
+class DZOB_OT_vertex_mass_set(bpy.types.Operator):
     """Set same mass on all selected vertices"""
     
-    bl_idname = "a3ob.vertex_mass_set"
+    bl_idname = "dzob.vertex_mass_set"
     bl_label = "Set Mass On Each"
     bl_options = {'REGISTER', 'UNDO'}
     
@@ -26,10 +26,10 @@ class A3OB_OT_vertex_mass_set(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_vertex_mass_distribute(bpy.types.Operator):
+class DZOB_OT_vertex_mass_distribute(bpy.types.Operator):
     """Distribute mass equally to selected vertices"""
     
-    bl_idname = "a3ob.vertex_mass_distribute"
+    bl_idname = "dzob.vertex_mass_distribute"
     bl_label = "Distribute Mass"
     bl_options = {'REGISTER'}
     
@@ -69,10 +69,10 @@ class A3OB_OT_vertex_mass_distribute(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_vertex_mass_set_density(bpy.types.Operator):
+class DZOB_OT_vertex_mass_set_density(bpy.types.Operator):
     """Calculate mass distribution from volumetric density (operates on the entire mesh)"""
     
-    bl_idname = "a3ob.vertex_mass_set_density"
+    bl_idname = "dzob.vertex_mass_set_density"
     bl_label = "Mass From Density"
     bl_options = {'REGISTER'}
     
@@ -113,10 +113,10 @@ class A3OB_OT_vertex_mass_set_density(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_vertex_mass_clear(bpy.types.Operator):
+class DZOB_OT_vertex_mass_clear(bpy.types.Operator):
     """Remove vertex mass data layer"""
     
-    bl_idname = "a3ob.vertex_mass_clear"
+    bl_idname = "dzob.vertex_mass_clear"
     bl_label = "Clear All Masses"
     bl_options = {'REGISTER', 'UNDO'}
     
@@ -131,10 +131,10 @@ class A3OB_OT_vertex_mass_clear(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_vertex_mass_selection_clear(bpy.types.Operator):
+class DZOB_OT_vertex_mass_selection_clear(bpy.types.Operator):
     """Clear vertex mass from selected vertices"""
     
-    bl_idname = "a3ob.vertex_mass_selection_clear"
+    bl_idname = "dzob.vertex_mass_selection_clear"
     bl_label = "Remove Mass"
     bl_options = {'REGISTER', 'UNDO'}
     
@@ -148,10 +148,10 @@ class A3OB_OT_vertex_mass_selection_clear(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_vertex_mass_visualize(bpy.types.Operator):
+class DZOB_OT_vertex_mass_visualize(bpy.types.Operator):
     """Generate vertex color layer to visualize mass distribution"""
     
-    bl_idname = "a3ob.vertex_mass_visualize"
+    bl_idname = "dzob.vertex_mass_visualize"
     bl_label = "Visualize"
     bl_options = {'REGISTER', 'UNDO'}
     
@@ -168,10 +168,10 @@ class A3OB_OT_vertex_mass_visualize(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_vertex_mass_center(bpy.types.Operator):
+class DZOB_OT_vertex_mass_center(bpy.types.Operator):
     """Move 3D cursor to the center of gravity"""
 
-    bl_idname = "a3ob.vertex_mass_center"
+    bl_idname = "dzob.vertex_mass_center"
     bl_label = "Center of Mass"
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -188,7 +188,7 @@ class A3OB_OT_vertex_mass_center(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_PT_vertex_mass(bpy.types.Panel):
+class DZOB_PT_vertex_mass(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = "Object Builder"
@@ -226,27 +226,27 @@ class A3OB_PT_vertex_mass(bpy.types.Panel):
         col.prop(scene_props, "value")
 
         box_op_set = col.box()
-        box_op_set.operator("a3ob.vertex_mass_set", icon_value=get_icon("op_mass_set"))
+        box_op_set.operator("dzob.vertex_mass_set", icon_value=get_icon("op_mass_set"))
 
         box_op_calc = col.box()
         row_distribution = box_op_calc.row(align=True)
         row_distribution.prop(scene_props, "distribution", expand=True)
-        box_op_calc.operator("a3ob.vertex_mass_distribute", icon_value=get_icon("op_mass_distribute"))
-        box_op_calc.operator("a3ob.vertex_mass_set_density", icon_value=get_icon("op_mass_set_density"))
+        box_op_calc.operator("dzob.vertex_mass_distribute", icon_value=get_icon("op_mass_distribute"))
+        box_op_calc.operator("dzob.vertex_mass_set_density", icon_value=get_icon("op_mass_set_density"))
         
         col.separator()
         if context.object and context.object.type == 'MESH' and context.object.mode == 'EDIT':
-            col.operator("a3ob.vertex_mass_selection_clear", icon_value=get_icon("op_mass_clear"))
+            col.operator("dzob.vertex_mass_selection_clear", icon_value=get_icon("op_mass_clear"))
         else:
-            col.operator("a3ob.vertex_mass_clear", icon_value=get_icon("op_mass_clear"))
+            col.operator("dzob.vertex_mass_clear", icon_value=get_icon("op_mass_clear"))
 
 
-class A3OB_PT_vertex_mass_analyze(bpy.types.Panel):
+class DZOB_PT_vertex_mass_analyze(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = "Object Builder"
     bl_label = "Analyze"
-    bl_parent_id = "A3OB_PT_vertex_mass"
+    bl_parent_id = "DZOB_PT_vertex_mass"
     bl_options = {'DEFAULT_CLOSED'}
     
     @classmethod
@@ -288,8 +288,8 @@ class A3OB_PT_vertex_mass_analyze(bpy.types.Panel):
         row_method = layout.row(align=True)
         row_method.prop(scene_props, "method", text="Method", expand=True)
         
-        layout.operator("a3ob.vertex_mass_visualize", icon_value=get_icon("op_visualize"))
-        layout.operator("a3ob.vertex_mass_center", icon_value=get_icon("op_mass_center"))
+        layout.operator("dzob.vertex_mass_visualize", icon_value=get_icon("op_visualize"))
+        layout.operator("dzob.vertex_mass_center", icon_value=get_icon("op_mass_center"))
         
         layout.label(text="Stats:")
         col_stats = layout.column(align=True)
@@ -302,15 +302,15 @@ class A3OB_PT_vertex_mass_analyze(bpy.types.Panel):
 
 
 classes = (
-    A3OB_OT_vertex_mass_set,
-    A3OB_OT_vertex_mass_distribute,
-    A3OB_OT_vertex_mass_set_density,
-    A3OB_OT_vertex_mass_clear,
-    A3OB_OT_vertex_mass_selection_clear,
-    A3OB_OT_vertex_mass_visualize,
-    A3OB_OT_vertex_mass_center,
-    A3OB_PT_vertex_mass,
-    A3OB_PT_vertex_mass_analyze
+    DZOB_OT_vertex_mass_set,
+    DZOB_OT_vertex_mass_distribute,
+    DZOB_OT_vertex_mass_set_density,
+    DZOB_OT_vertex_mass_clear,
+    DZOB_OT_vertex_mass_selection_clear,
+    DZOB_OT_vertex_mass_visualize,
+    DZOB_OT_vertex_mass_center,
+    DZOB_PT_vertex_mass,
+    DZOB_PT_vertex_mass_analyze
 )
 
 

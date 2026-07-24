@@ -25,7 +25,6 @@ It is a **DayZ**-focused fork of [**Arma 3 Object Builder**](https://github.com/
 | Format | Notes |
 | ------ | ----- |
 | **P3D** models | Full round-trip, plus direct **binarized (ODOL)** import |
-| **RTM** animations | Keyframe animation data |
 | **ASC** terrain | Heightfields |
 | **PAA** textures | Import (DXT1 / DXT5) |
 | **model.cfg** skeletons | Import & export |
@@ -57,13 +56,13 @@ The add-on is developed on **Blender** v2.90.0, which has the side effect that i
 Download a packaged release, or clone this repository and pack the `DZObjectBuilder/` folder manually. See the official [**Blender** documentation](https://docs.blender.org/manual/en/latest/editors/preferences/addons.html) on installing add-ons.
 
 > [!WARNING]
-> **DZOB cannot be enabled alongside Arma 3 Object Builder.** The fork deliberately keeps the upstream operator, property and panel identifiers, so both add-ons register the same names. Disable one before enabling the other.
+> **DZOB cannot be enabled alongside Arma 3 Object Builder.** The fork deliberately keeps the upstream `.blend` custom-property names, so both add-ons register the same property identifiers on your objects and would collide. Disable one before enabling the other.
 
-That same decision is what keeps existing `.blend` files working: the model metadata on your objects is stored under the upstream property names, and renaming those would silently drop it.
+That same decision is what keeps existing `.blend` files working: the model metadata on your objects is stored under the upstream property names, and renaming those would silently drop it. The operator and panel identifiers, by contrast, have been renamed to the DZOB namespace.
 
 ## Documentation
 
-Since the identifiers and panels match upstream, MrClock's documentation on [GitBook](https://mrcmodding.gitbook.io/arma-3-object-builder/home) describes this add-on accurately. Features specific to this fork are documented above and in [`DZObjectBuilder/CHANGELOG.md`](DZObjectBuilder/CHANGELOG.md).
+Because this fork stays close to upstream in workflow, properties and panel layout, MrClock's documentation on [GitBook](https://mrcmodding.gitbook.io/arma-3-object-builder/home) still describes most of this add-on accurately. Features specific to this fork are documented above; per-version changes are in the [release notes](https://github.com/SXDIST/DayZObjectBuilder/releases).
 
 ## Credits
 

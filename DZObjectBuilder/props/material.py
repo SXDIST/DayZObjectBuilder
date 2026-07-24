@@ -7,7 +7,7 @@ from ..utilities import generic as utils
 from ..utilities import data
 
 
-class A3OB_PG_properties_material(bpy.types.PropertyGroup):
+class DZOB_PG_properties_material(bpy.types.PropertyGroup):
     texture_type: bpy.props.EnumProperty( 
         name = "Texture Source",
         description = "Source of face texture",
@@ -53,8 +53,8 @@ class A3OB_PG_properties_material(bpy.types.PropertyGroup):
     # )
     
     def from_p3d(self, texture, material, absolute):
-        regex_procedural = "#\(.*?\)\w+\(.*?\)"
-        regex_procedural_color = "#\(argb,\d+,\d+,\d+\)color\((\d+.?\d*),(\d+.?\d*),(\d+.?\d*),(\d+.?\d*),([a-zA-Z]+)\)"
+        regex_procedural = r"#\(.*?\)\w+\(.*?\)"
+        regex_procedural_color = r"#\(argb,\d+,\d+,\d+\)color\((\d+.?\d*),(\d+.?\d*),(\d+.?\d*),(\d+.?\d*),([a-zA-Z]+)\)"
         
         if re.match(regex_procedural, texture):
             texture = texture.replace(" ", "") # remove spaces to simplify regex parsing
@@ -98,7 +98,7 @@ class A3OB_PG_properties_material(bpy.types.PropertyGroup):
 
 
 classes = (
-    A3OB_PG_properties_material,
+    DZOB_PG_properties_material,
 )
 
 
@@ -106,7 +106,7 @@ def register():
     for cls in classes:
         bpy.utils.register_class(cls)
     
-    bpy.types.Material.a3ob_properties_material = bpy.props.PointerProperty(type=A3OB_PG_properties_material)
+    bpy.types.Material.a3ob_properties_material = bpy.props.PointerProperty(type=DZOB_PG_properties_material)
     
     print("\t" + "Properties: material")
 

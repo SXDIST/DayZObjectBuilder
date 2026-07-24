@@ -6,11 +6,11 @@ from ..utilities import generic as utils
 from ..utilities import outliner as linerutils
 
 
-class A3OB_UL_outliner_lods(bpy.types.UIList):
+class DZOB_UL_outliner_lods(bpy.types.UIList):
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname):
         row = layout.row(align=True)
         row.alignment = 'EXPAND'
-        op = row.operator("a3ob.select_object", text="", icon='RESTRICT_SELECT_OFF', emboss=False)
+        op = row.operator("dzob.select_object", text="", icon='RESTRICT_SELECT_OFF', emboss=False)
         op.object_name = item.obj
         row.label(text=" %s" % item.name)
 
@@ -29,10 +29,10 @@ class A3OB_UL_outliner_lods(bpy.types.UIList):
         return flt_flags, flt_neworder
 
 
-class A3OB_UL_outliner_proxies(bpy.types.UIList):
+class DZOB_UL_outliner_proxies(bpy.types.UIList):
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname):
         row = layout.row(align=True)
-        op = row.operator("a3ob.select_object", text="", icon='RESTRICT_SELECT_OFF', emboss=False)
+        op = row.operator("dzob.select_object", text="", icon='RESTRICT_SELECT_OFF', emboss=False)
         op.object_name = item.obj
         op.identify_lod = False
         row.label(text=" %s" % item.name)
@@ -48,10 +48,10 @@ class A3OB_UL_outliner_proxies(bpy.types.UIList):
         return flt_flags, flt_neworder
 
 
-class A3OB_OT_select_object(bpy.types.Operator):
+class DZOB_OT_select_object(bpy.types.Operator):
     """Select object in scene"""
     
-    bl_idname = "a3ob.select_object"
+    bl_idname = "dzob.select_object"
     bl_label = "Select Object"
     bl_options = {'REGISTER'}
     
@@ -80,10 +80,10 @@ class A3OB_OT_select_object(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_indentify_lod(bpy.types.Operator):
+class DZOB_OT_indentify_lod(bpy.types.Operator):
     """Identify the active object in the outliner"""
 
-    bl_idname = "a3ob.identify_lod"
+    bl_idname = "dzob.identify_lod"
     bl_label = "Identify"
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -98,7 +98,7 @@ class A3OB_OT_indentify_lod(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_PT_outliner(bpy.types.Panel):
+class DZOB_PT_outliner(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = "Object Builder"
@@ -122,7 +122,7 @@ class A3OB_PT_outliner(bpy.types.Panel):
         row_header.prop(scene_props, "show_hidden", text="", icon='OBJECT_HIDDEN', toggle=True)
 
         col_list = layout.column(align=True)
-        col_list.template_list("A3OB_UL_outliner_lods", "A3OB_outliner_lods", scene_props, "lods", scene_props, "lods_index")
+        col_list.template_list("DZOB_UL_outliner_lods", "DZOB_outliner_lods", scene_props, "lods", scene_props, "lods_index")
         
         row_counts = col_list.row(align=True)
         box_proxy = row_counts.box()
@@ -136,15 +136,15 @@ class A3OB_PT_outliner(bpy.types.Panel):
             box_proxy.label(text="")
             box_subobject.label(text="")
 
-        layout.operator("a3ob.identify_lod", icon='VIEWZOOM')
+        layout.operator("dzob.identify_lod", icon='VIEWZOOM')
 
 
-class A3OB_PT_outliner_proxies(bpy.types.Panel):
+class DZOB_PT_outliner_proxies(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = "Object Builder"
     bl_label = "Proxies"
-    bl_parent_id = "A3OB_PT_outliner"
+    bl_parent_id = "DZOB_PT_outliner"
     bl_options = {'DEFAULT_CLOSED'}
     
     @classmethod
@@ -155,7 +155,7 @@ class A3OB_PT_outliner_proxies(bpy.types.Panel):
         layout = self.layout
         scene_props = context.scene.a3ob_outliner
 
-        layout.template_list("A3OB_UL_outliner_proxies", "A3OB_outliner_proxies", scene_props, "proxies", scene_props, "proxies_index")
+        layout.template_list("DZOB_UL_outliner_proxies", "DZOB_outliner_proxies", scene_props, "proxies", scene_props, "proxies_index")
         
 
 @persistent
@@ -164,12 +164,12 @@ def depsgraph_update_post_handler(scene, depsgraph):
     
 
 classes = (
-    A3OB_UL_outliner_proxies,
-    A3OB_UL_outliner_lods,
-    A3OB_OT_select_object,
-    A3OB_OT_indentify_lod,
-    A3OB_PT_outliner,
-    A3OB_PT_outliner_proxies
+    DZOB_UL_outliner_proxies,
+    DZOB_UL_outliner_lods,
+    DZOB_OT_select_object,
+    DZOB_OT_indentify_lod,
+    DZOB_PT_outliner,
+    DZOB_PT_outliner_proxies
 )
 
 

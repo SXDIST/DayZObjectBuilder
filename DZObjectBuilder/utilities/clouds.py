@@ -86,12 +86,12 @@ def generate_hitpoints(operator, context):
     
     source_object = source
         
-    modifier_bevel = source_object.modifiers.new("A3OB_HitPointBevel", 'BEVEL')
+    modifier_bevel = source_object.modifiers.new("DZOB_HitPointBevel", 'BEVEL')
     modifier_bevel.segments = 1
     modifier_bevel.width = 0.001
     modifier_bevel.limit_method = 'NONE'
 
-    modifier_triangulate = source_object.modifiers.new("A3OB_HitPointTris", 'TRIANGULATE')
+    modifier_triangulate = source_object.modifiers.new("DZOB_HitPointTris", 'TRIANGULATE')
 
     source_object_eval = source_object.evaluated_get(context.evaluated_depsgraph_get())
 

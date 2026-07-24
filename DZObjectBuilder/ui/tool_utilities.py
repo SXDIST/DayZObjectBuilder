@@ -1,17 +1,15 @@
-import os
-
 import bpy
 
-from .. import get_icon, addon_dir
+from .. import get_icon
 from ..utilities import structure as structutils
 from ..utilities import data
 
 
-class A3OB_OT_check_convexity(bpy.types.Operator):
+class DZOB_OT_check_convexity(bpy.types.Operator):
     """Find concave edges"""
     
     bl_label = "Find Non-Convexities"
-    bl_idname = "a3ob.find_non_convexities"
+    bl_idname = "dzob.find_non_convexities"
     
     @classmethod
     def poll(cls, context):
@@ -33,11 +31,11 @@ class A3OB_OT_check_convexity(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_check_closed(bpy.types.Operator):
+class DZOB_OT_check_closed(bpy.types.Operator):
     """Find non-closed parts of model"""
     
     bl_label = "Find Non-Closed"
-    bl_idname = "a3ob.find_non_closed"
+    bl_idname = "dzob.find_non_closed"
     
     @classmethod
     def poll(cls, context):
@@ -49,11 +47,11 @@ class A3OB_OT_check_closed(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_convex_hull(bpy.types.Operator):
+class DZOB_OT_convex_hull(bpy.types.Operator):
     """Calculate convex hull for entire object"""
     
     bl_label = "Convex Hull"
-    bl_idname = "a3ob.convex_hull"
+    bl_idname = "dzob.convex_hull"
     
     @classmethod
     def poll(cls, context):
@@ -67,11 +65,11 @@ class A3OB_OT_convex_hull(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_component_convex_hull(bpy.types.Operator):
+class DZOB_OT_component_convex_hull(bpy.types.Operator):
     """Create convex named component selections"""
     
     bl_label = "Component Convex Hull"
-    bl_idname = "a3ob.component_convex_hull"
+    bl_idname = "dzob.component_convex_hull"
     
     @classmethod
     def poll(cls, context):
@@ -87,11 +85,11 @@ class A3OB_OT_component_convex_hull(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_find_components(bpy.types.Operator):
+class DZOB_OT_find_components(bpy.types.Operator):
     """Create named component selections"""
     
     bl_label = "Find Components"
-    bl_idname = "a3ob.find_components"
+    bl_idname = "dzob.find_components"
     
     @classmethod
     def poll(cls, context):
@@ -112,11 +110,11 @@ class A3OB_OT_find_components(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_move_top(bpy.types.Operator):
+class DZOB_OT_move_top(bpy.types.Operator):
     """Move selected faces to top of face list (relative order of selected faces is maintained)"""
     
     bl_label = "Move Top"
-    bl_idname = "a3ob.move_top"
+    bl_idname = "dzob.move_top"
     
     @classmethod
     def poll(cls, context):
@@ -128,11 +126,11 @@ class A3OB_OT_move_top(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_move_bottom(bpy.types.Operator):
+class DZOB_OT_move_bottom(bpy.types.Operator):
     """Move selected faces to bottom of face list (relative order of selected faces is maintained)"""
     
     bl_label = "Move Bottom"
-    bl_idname = "a3ob.move_bottom"
+    bl_idname = "dzob.move_bottom"
     
     @classmethod
     def poll(cls, context):
@@ -144,11 +142,11 @@ class A3OB_OT_move_bottom(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_recalculate_normals(bpy.types.Operator):
+class DZOB_OT_recalculate_normals(bpy.types.Operator):
     """Recalculate face normals"""
     
     bl_label = "Recalculate Normals"
-    bl_idname = "a3ob.recalculate_normals"
+    bl_idname = "dzob.recalculate_normals"
     
     @classmethod
     def poll(cls, context):
@@ -161,11 +159,11 @@ class A3OB_OT_recalculate_normals(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_cleanup_vertex_groups(bpy.types.Operator):
+class DZOB_OT_cleanup_vertex_groups(bpy.types.Operator):
     """Cleanup vertex groups with no vertices assigned"""
     
     bl_label = "Delete Unused Groups"
-    bl_idname = "a3ob.vertex_groups_cleanup"
+    bl_idname = "dzob.vertex_groups_cleanup"
     
     @classmethod
     def poll(cls, context):
@@ -190,11 +188,11 @@ class A3OB_OT_cleanup_vertex_groups(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_translate_vertex_groups(bpy.types.Operator):
+class DZOB_OT_translate_vertex_groups(bpy.types.Operator):
     """Translate czech vertex group name to english where possible"""
 
     bl_label = "Translate Vertex Groups"
-    bl_idname = "a3ob.vertex_groups_translate"
+    bl_idname = "dzob.vertex_groups_translate"
 
     @classmethod
     def poll(self, context):
@@ -210,11 +208,11 @@ class A3OB_OT_translate_vertex_groups(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_redefine_vertex_group(bpy.types.Operator):
+class DZOB_OT_redefine_vertex_group(bpy.types.Operator):
     """Remove vertex group and recreate it with the selected verticies assigned"""
 
     bl_label = "Redefine Vertex Group"
-    bl_idname = "a3ob.vertex_group_redefine"
+    bl_idname = "dzob.vertex_group_redefine"
     
     @classmethod
     def poll(cls, context):
@@ -227,25 +225,7 @@ class A3OB_OT_redefine_vertex_group(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_open_changelog(bpy.types.Operator):
-    """Open DayZ Object Builder add-on changelog"""
-
-    bl_label = "Open Changelog"
-    bl_idname = "a3ob.open_changelog"
-
-    @classmethod
-    def poll(cls, context):
-        return True
-    
-    def execute(self, context):
-        path = os.path.join(addon_dir, "CHANGELOG.md")
-        bpy.ops.text.open(filepath=path, internal=True)
-        self.report({'INFO'}, "See CHANGELOG.md text block")
-
-        return {'FINISHED'}
-
-
-class A3OB_UL_common_data_base(bpy.types.UIList):
+class DZOB_UL_common_data_base(bpy.types.UIList):
     icons = {
         'MATERIALS': 'MATERIAL',
         'NAMEDPROPS': 'PROPERTIES',
@@ -326,7 +306,7 @@ class A3OB_UL_common_data_base(bpy.types.UIList):
         return flt_flags, flt_neworder
 
 
-class A3OB_UL_common_data_materials(A3OB_UL_common_data_base):
+class DZOB_UL_common_data_materials(DZOB_UL_common_data_base):
     filter_type: bpy.props.EnumProperty(
         name = "Type",
         items = (
@@ -346,7 +326,7 @@ class A3OB_UL_common_data_materials(A3OB_UL_common_data_base):
     )
 
 
-class A3OB_UL_common_data_namedprops(A3OB_UL_common_data_base):
+class DZOB_UL_common_data_namedprops(DZOB_UL_common_data_base):
     filter_type: bpy.props.EnumProperty(
         name = "Type",
         items = (
@@ -367,7 +347,7 @@ class A3OB_UL_common_data_namedprops(A3OB_UL_common_data_base):
         self.draw_filter_name(layout)
 
 
-class A3OB_UL_common_data_procedurals(A3OB_UL_common_data_base):
+class DZOB_UL_common_data_procedurals(DZOB_UL_common_data_base):
     filter_type: bpy.props.EnumProperty(
         name = "Type",
         items = (
@@ -388,7 +368,7 @@ class A3OB_UL_common_data_procedurals(A3OB_UL_common_data_base):
         self.draw_filter_name(layout)
 
 
-class A3OB_UL_common_data_proxies(A3OB_UL_common_data_base):
+class DZOB_UL_common_data_proxies(DZOB_UL_common_data_base):
     filter_type: bpy.props.EnumProperty(
         name = "Type",
         items = (
@@ -409,75 +389,75 @@ class A3OB_UL_common_data_proxies(A3OB_UL_common_data_base):
         self.draw_filter_name(layout)
 
 
-class A3OB_MT_object_builder_topo(bpy.types.Menu):
+class DZOB_MT_object_builder_topo(bpy.types.Menu):
     """Object Builder topology functions"""
     
     bl_label = "Topology"
     
     def draw(self, context):
-        self.layout.operator("a3ob.find_non_closed")
-        self.layout.operator("a3ob.find_components")
+        self.layout.operator("dzob.find_non_closed")
+        self.layout.operator("dzob.find_components")
 
 
-class A3OB_MT_object_builder_convexity(bpy.types.Menu):
+class DZOB_MT_object_builder_convexity(bpy.types.Menu):
     """Object Builder convexity functions"""
     
     bl_label = "Convexity"
     
     def draw(self, context):
-        self.layout.operator("a3ob.find_non_convexities")
-        self.layout.operator("a3ob.convex_hull")
-        self.layout.operator("a3ob.component_convex_hull")
+        self.layout.operator("dzob.find_non_convexities")
+        self.layout.operator("dzob.convex_hull")
+        self.layout.operator("dzob.component_convex_hull")
 
 
-class A3OB_MT_object_builder_faces(bpy.types.Menu):
+class DZOB_MT_object_builder_faces(bpy.types.Menu):
     """Object Builder face functions"""
     
     bl_label = "Faces"
     
     def draw(self, context):
-        self.layout.operator("a3ob.move_top")
-        self.layout.operator("a3ob.move_bottom")
-        self.layout.operator("a3ob.recalculate_normals")
+        self.layout.operator("dzob.move_top")
+        self.layout.operator("dzob.move_bottom")
+        self.layout.operator("dzob.recalculate_normals")
 
 
-class A3OB_MT_object_builder_misc(bpy.types.Menu):
+class DZOB_MT_object_builder_misc(bpy.types.Menu):
     """Object Builder miscellaneous functions"""
     
     bl_label = "Misc"
     
     def draw(self, context):
-        self.layout.operator("a3ob.vertex_groups_cleanup")
+        self.layout.operator("dzob.vertex_groups_cleanup")
 
 
-class A3OB_MT_object_builder(bpy.types.Menu):
+class DZOB_MT_object_builder(bpy.types.Menu):
     """DayZ Object Builder utility functions"""
     
     bl_label = "Object Builder"
     
     def draw(self, context):
-        self.layout.menu("A3OB_MT_object_builder_topo")
-        self.layout.menu("A3OB_MT_object_builder_convexity")
-        self.layout.menu("A3OB_MT_object_builder_faces")
-        self.layout.menu("A3OB_MT_object_builder_misc")
+        self.layout.menu("DZOB_MT_object_builder_topo")
+        self.layout.menu("DZOB_MT_object_builder_convexity")
+        self.layout.menu("DZOB_MT_object_builder_faces")
+        self.layout.menu("DZOB_MT_object_builder_misc")
 
 
-class A3OB_MT_vertex_groups(bpy.types.Menu):
+class DZOB_MT_vertex_groups(bpy.types.Menu):
     """Object Builder utility functions"""
 
     bl_label = "Utilities"
 
     def draw(self, context):
         layout = self.layout
-        layout.operator("a3ob.find_components", icon='STICKY_UVS_DISABLE')
+        layout.operator("dzob.find_components", icon='STICKY_UVS_DISABLE')
         layout.separator()
-        layout.operator("a3ob.vertex_group_redefine", icon='FILE_REFRESH')
-        layout.operator("a3ob.vertex_groups_translate", icon='SYNTAX_OFF')
+        layout.operator("dzob.vertex_group_redefine", icon='FILE_REFRESH')
+        layout.operator("dzob.vertex_groups_translate", icon='SYNTAX_OFF')
         layout.separator()
-        layout.operator("a3ob.vertex_groups_cleanup", icon='TRASH')
+        layout.operator("dzob.vertex_groups_cleanup", icon='TRASH')
 
 
-class A3OB_MT_help(bpy.types.Menu):
+class DZOB_MT_help(bpy.types.Menu):
     """Object Builder add-on docs"""
 
     bl_label = "Object Builder"
@@ -490,34 +470,32 @@ class A3OB_MT_help(bpy.types.Menu):
         layout.separator()
         layout.operator("wm.url_open", text="Releases", icon='URL').url = "https://github.com/SXDIST/DayZObjectBuilder/releases"
         layout.operator("wm.url_open", text="Issue Tracker", icon='URL').url = "https://github.com/SXDIST/DayZObjectBuilder/issues"
-        layout.operator("a3ob.open_changelog", text="Changelog", icon='TEXT')
 
 
 classes = (
-    A3OB_OT_check_convexity,
-    A3OB_OT_check_closed,
-    A3OB_OT_convex_hull,
-    A3OB_OT_component_convex_hull,
-    A3OB_OT_find_components,
-    A3OB_OT_move_top,
-    A3OB_OT_move_bottom,
-    A3OB_OT_recalculate_normals,
-    A3OB_OT_cleanup_vertex_groups,
-    A3OB_OT_translate_vertex_groups,
-    A3OB_OT_redefine_vertex_group,
-    A3OB_OT_open_changelog,
-    A3OB_UL_common_data_base,
-    A3OB_UL_common_data_materials,
-    A3OB_UL_common_data_namedprops,
-    A3OB_UL_common_data_procedurals,
-    A3OB_UL_common_data_proxies,
-    A3OB_MT_object_builder,
-    A3OB_MT_object_builder_topo,
-    A3OB_MT_object_builder_faces,
-    A3OB_MT_object_builder_convexity,
-    A3OB_MT_object_builder_misc,
-    A3OB_MT_vertex_groups,
-    A3OB_MT_help
+    DZOB_OT_check_convexity,
+    DZOB_OT_check_closed,
+    DZOB_OT_convex_hull,
+    DZOB_OT_component_convex_hull,
+    DZOB_OT_find_components,
+    DZOB_OT_move_top,
+    DZOB_OT_move_bottom,
+    DZOB_OT_recalculate_normals,
+    DZOB_OT_cleanup_vertex_groups,
+    DZOB_OT_translate_vertex_groups,
+    DZOB_OT_redefine_vertex_group,
+    DZOB_UL_common_data_base,
+    DZOB_UL_common_data_materials,
+    DZOB_UL_common_data_namedprops,
+    DZOB_UL_common_data_procedurals,
+    DZOB_UL_common_data_proxies,
+    DZOB_MT_object_builder,
+    DZOB_MT_object_builder_topo,
+    DZOB_MT_object_builder_faces,
+    DZOB_MT_object_builder_convexity,
+    DZOB_MT_object_builder_misc,
+    DZOB_MT_vertex_groups,
+    DZOB_MT_help
 )
 
 
@@ -525,19 +503,19 @@ def menu_func(self, context):
     self.layout.separator()
     col = self.layout.column()
     col.ui_units_x = 5.2
-    col.menu("A3OB_MT_object_builder", icon_value=get_icon("addon"))
+    col.menu("DZOB_MT_object_builder", icon_value=get_icon("addon"))
 
 
 def vertex_groups_func(self, context):
     layout = self.layout
     row = layout.row(align=True)
     row.alignment = 'RIGHT'
-    row.menu("A3OB_MT_vertex_groups", text="", icon_value=get_icon("addon"))
+    row.menu("DZOB_MT_vertex_groups", text="", icon_value=get_icon("addon"))
 
 
 def menu_help_func(self, context):
     self.layout.separator()
-    self.layout.menu("A3OB_MT_help", icon_value=get_icon("addon"))
+    self.layout.menu("DZOB_MT_help", icon_value=get_icon("addon"))
 
 
 def register():

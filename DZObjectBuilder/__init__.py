@@ -1,9 +1,9 @@
 bl_info = {
     "name": "DayZ Object Builder",
-    "description": "Collection of tools for editing DayZ and Arma content",
+    "description": "Collection of tools for editing DayZ content",
     "author": "SXDIST (DZOB fork), MrClock (Arma 3 Object Builder add-on), Hans-Joerg \"Alwarren\" Frieden (original ArmaToolbox add-on)",
-    "version": (4, 2, 4),
-    "blender": (2, 90, 0),
+    "version": (5, 0, 0),
+    "blender": (4, 4, 0),
     "location": "Object Builder panels",
     "warning": "Development",
     "doc_url": "https://mrcmodding.gitbook.io/arma-3-object-builder/home",
@@ -60,34 +60,34 @@ def outliner_enable_update(self, context):
         context.scene.a3ob_outliner.clear()
 
 
-class A3OB_OT_prefs_find_a3_tools(bpy.types.Operator):
-    """Find the Arma 3 Tools installation through the Windows registry"""
-    
-    bl_idname = "a3ob.prefs_find_a3_tools"
-    bl_label = "Find Arma 3 Tools"
+class DZOB_OT_prefs_find_dayz_tools(bpy.types.Operator):
+    """Find the DayZ Tools installation through the Windows registry"""
+
+    bl_idname = "dzob.prefs_find_dayz_tools"
+    bl_label = "Find DayZ Tools"
     bl_options = {'REGISTER', 'UNDO'}
-    
+
     @classmethod
     def poll(cls, context):
         return True
-    
+
     def execute(self, context):
         try:
             from winreg import OpenKey, QueryValueEx, HKEY_CURRENT_USER
-            key = OpenKey(HKEY_CURRENT_USER, r"software\bohemia interactive\arma 3 tools")
+            key = OpenKey(HKEY_CURRENT_USER, r"software\bohemia interactive\dayz tools")
             value, _type = QueryValueEx(key, "path")
-            addon_prefs.a3_tools = value
-            
+            addon_prefs.dayz_tools = value
+
         except Exception:
-            self.report({'ERROR'}, "The Arma 3 Tools installation could not be found, it has to be set manually")
-        
+            self.report({'ERROR'}, "The DayZ Tools installation could not be found, it has to be set manually")
+
         return {'FINISHED'}
 
 
-class A3OB_OT_prefs_edit_flag_vertex(bpy.types.Operator):
+class DZOB_OT_prefs_edit_flag_vertex(bpy.types.Operator):
     """Set the default vertex flag value"""
 
-    bl_idname = "a3ob.prefs_edit_flag_vertex"
+    bl_idname = "dzob.prefs_edit_flag_vertex"
     bl_label = "Edit"
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -158,10 +158,10 @@ class A3OB_OT_prefs_edit_flag_vertex(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_prefs_edit_flag_face(bpy.types.Operator):
+class DZOB_OT_prefs_edit_flag_face(bpy.types.Operator):
     """Set the default face flag value"""
 
-    bl_idname = "a3ob.prefs_edit_flag_face"
+    bl_idname = "dzob.prefs_edit_flag_face"
     bl_label = "Edit"
     bl_options = {'REGISTER', 'UNDO'}
     
@@ -210,7 +210,7 @@ class A3OB_OT_prefs_edit_flag_face(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_AT_preferences(bpy.types.AddonPreferences):
+class DZOB_AT_preferences(bpy.types.AddonPreferences):
     bl_idname = __package__
     
     tabs: bpy.props.EnumProperty(
@@ -253,14 +253,14 @@ class A3OB_AT_preferences(bpy.types.AddonPreferences):
         update = outliner_enable_update
     )
     # Paths
-    a3_tools: bpy.props.StringProperty(
-        name = "Arma 3 Tools",
-        description = "Install directory of the official Arma 3 Tools",
+    dayz_tools: bpy.props.StringProperty(
+        name = "DayZ Tools",
+        description = "Install directory of the official DayZ Tools",
         subtype = 'DIR_PATH'
     )
     project_root: bpy.props.StringProperty(
         name = "Project Root",
-        description = "Root directory of the project (should be P:\ for most cases)",
+        description = "Root directory of the project (should be P:\\ for most cases)",
         default = "P:\\",
         subtype = 'DIR_PATH'
     )
@@ -313,20 +313,20 @@ class A3OB_AT_preferences(bpy.types.AddonPreferences):
             row_outliner.prop(self, "outliner", expand=True)
             
         elif self.tabs == 'PATHS':
-            row_a3_tools = box.row(align=True)
-            row_a3_tools.prop(self, "a3_tools", icon='TOOL_SETTINGS')
-            row_a3_tools.operator("a3ob.prefs_find_a3_tools", text="", icon='VIEWZOOM')
+            row_dayz_tools = box.row(align=True)
+            row_dayz_tools.prop(self, "dayz_tools", icon='TOOL_SETTINGS')
+            row_dayz_tools.operator("dzob.prefs_find_dayz_tools", text="", icon='VIEWZOOM')
             box.prop(self, "project_root", icon='DISK_DRIVE')
             box.prop(self, "custom_data", icon='PRESET')
         
         elif self.tabs == 'DEFAULTS':
             row_vertex = box.row(align=True)
             row_vertex.prop(self, "flag_vertex_display")
-            row_vertex.operator("a3ob.prefs_edit_flag_vertex", text="", icon='GREASEPENCIL')
+            row_vertex.operator("dzob.prefs_edit_flag_vertex", text="", icon='GREASEPENCIL')
 
             row_face = box.row(align=True)
             row_face.prop(self, "flag_face_display")
-            row_face.operator("a3ob.prefs_edit_flag_face", text="", icon='GREASEPENCIL')
+            row_face.operator("dzob.prefs_edit_flag_face", text="", icon='GREASEPENCIL')
         
         elif self.tabs == 'DEBUG':
             box.prop(self, "preserve_faulty_output")
@@ -334,10 +334,10 @@ class A3OB_AT_preferences(bpy.types.AddonPreferences):
 
 
 classes = (
-    A3OB_OT_prefs_find_a3_tools,
-    A3OB_OT_prefs_edit_flag_vertex,
-    A3OB_OT_prefs_edit_flag_face,
-    A3OB_AT_preferences
+    DZOB_OT_prefs_find_dayz_tools,
+    DZOB_OT_prefs_edit_flag_vertex,
+    DZOB_OT_prefs_edit_flag_face,
+    DZOB_AT_preferences
 )
 
 
@@ -345,17 +345,19 @@ modules = (
     props.object,
     props.material,
     props.scene,
-    props.action,
-    ui.props_action,
+    props.lod_generator,
     ui.props_object_mesh,
     ui.props_material,
+    ui.import_export_menu,
     ui.import_export_p3d,
-    ui.import_export_rtm,
+    ui.import_export_xob,
+    ui.import_export_anm,
     ui.import_export_mcfg,
     ui.import_export_armature,
     ui.import_export_tbcsv,
     ui.import_export_asc,
     ui.import_export_paa,
+    ui.tool_lod_generator,
     ui.tool_outliner,
     ui.tool_mass,
     ui.tool_materials,
@@ -365,7 +367,8 @@ modules = (
     ui.tool_validation,
     ui.tool_rigging,
     ui.tool_utilities,
-    ui.tool_scripts
+    ui.tool_scripts,
+    ui.tool_character_rig
 )
 
 

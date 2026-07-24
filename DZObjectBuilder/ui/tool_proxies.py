@@ -20,7 +20,7 @@ proxy_preview_owner_key_prop = "a3ob_proxy_live_preview_owner_key"
 proxy_preview_object_prop = "a3ob_proxy_live_preview_object"
 proxy_preview_path_prop = "a3ob_proxy_live_preview_path"
 proxy_owner_key_prop = "a3ob_proxy_live_preview_key"
-proxy_preview_collection = "A3OB Live Proxy Preview"
+proxy_preview_collection = "DZOB Live Proxy Preview"
 proxy_preview_syncing = False
 
 
@@ -109,7 +109,7 @@ def ensure_proxy_preview_key(obj):
 
 
 def find_proxy_owner(preview):
-    for name in ("A3OB Live Proxy Location", "A3OB Live Proxy Rotation"):
+    for name in ("DZOB Live Proxy Location", "DZOB Live Proxy Rotation"):
         constraint = preview.constraints.get(name)
         if not constraint or not constraint.target:
             continue
@@ -138,7 +138,7 @@ def preview_targets_owner(preview, owner):
     if not preview or not preview.get(legacy_proxy_preview_prop):
         return False
 
-    for name in ("A3OB Live Proxy Location", "A3OB Live Proxy Rotation"):
+    for name in ("DZOB Live Proxy Location", "DZOB Live Proxy Rotation"):
         constraint = preview.constraints.get(name)
         if constraint and constraint.target == owner:
             return True
@@ -208,19 +208,19 @@ def remove_preview_object(obj):
 
 
 def ensure_preview_constraints(preview, proxy_object):
-    constraint = preview.constraints.get("A3OB Live Proxy Location")
+    constraint = preview.constraints.get("DZOB Live Proxy Location")
     if constraint is None:
         constraint = preview.constraints.new(type='COPY_LOCATION')
-        constraint.name = "A3OB Live Proxy Location"
+        constraint.name = "DZOB Live Proxy Location"
 
     constraint.target = proxy_object
     constraint.owner_space = 'WORLD'
     constraint.target_space = 'WORLD'
 
-    constraint = preview.constraints.get("A3OB Live Proxy Rotation")
+    constraint = preview.constraints.get("DZOB Live Proxy Rotation")
     if constraint is None:
         constraint = preview.constraints.new(type='COPY_ROTATION')
-        constraint.name = "A3OB Live Proxy Rotation"
+        constraint.name = "DZOB Live Proxy Rotation"
 
     constraint.target = proxy_object
     constraint.owner_space = 'WORLD'
@@ -445,10 +445,10 @@ def rebuild_live_previews(context):
     return loaded, skipped
 
 
-class A3OB_OT_proxy_realign_ocs(bpy.types.Operator):
+class DZOB_OT_proxy_realign_ocs(bpy.types.Operator):
     """Realign the proxy object coordinate system with proxy directions"""
     
-    bl_idname = "a3ob.proxy_realign_ocs"
+    bl_idname = "dzob.proxy_realign_ocs"
     bl_label = "Realign Coordinate System"
     bl_options = {'REGISTER', 'UNDO'}
     
@@ -464,10 +464,10 @@ class A3OB_OT_proxy_realign_ocs(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_proxy_live_preview_toggle(bpy.types.Operator):
+class DZOB_OT_proxy_live_preview_toggle(bpy.types.Operator):
     """Toggle non-selectable proxy preview meshes"""
 
-    bl_idname = "a3ob.proxy_live_preview_toggle"
+    bl_idname = "dzob.proxy_live_preview_toggle"
     bl_label = "Live Editing"
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -500,10 +500,10 @@ class A3OB_OT_proxy_live_preview_toggle(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_proxy_live_preview_refresh(bpy.types.Operator):
+class DZOB_OT_proxy_live_preview_refresh(bpy.types.Operator):
     """Refresh non-selectable proxy preview meshes"""
 
-    bl_idname = "a3ob.proxy_live_preview_refresh"
+    bl_idname = "dzob.proxy_live_preview_refresh"
     bl_label = "Refresh Live Editing"
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -523,10 +523,10 @@ class A3OB_OT_proxy_live_preview_refresh(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_proxy_align(bpy.types.Operator):
+class DZOB_OT_proxy_align(bpy.types.Operator):
     """Align the proxy object to another selected object"""
     
-    bl_idname = "a3ob.proxy_align"
+    bl_idname = "dzob.proxy_align"
     bl_label = "Align To Object"
     bl_options = {'REGISTER', 'UNDO'}
     
@@ -553,10 +553,10 @@ class A3OB_OT_proxy_align(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_proxy_align_object(bpy.types.Operator):
+class DZOB_OT_proxy_align_object(bpy.types.Operator):
     """Align an object to a selected proxy object"""
     
-    bl_idname = "a3ob.proxy_align_object"
+    bl_idname = "dzob.proxy_align_object"
     bl_label = "Align To Proxy"
     bl_options = {'REGISTER', 'UNDO'}
     
@@ -583,10 +583,10 @@ class A3OB_OT_proxy_align_object(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_proxy_extract(bpy.types.Operator):
+class DZOB_OT_proxy_extract(bpy.types.Operator):
     """Import 1st LOD of proxy model in place of proxy object"""
     
-    bl_idname = "a3ob.proxy_extract"
+    bl_idname = "dzob.proxy_extract"
     bl_label = "Extract Proxy"
     bl_options = {'REGISTER', 'UNDO'}
     
@@ -650,10 +650,10 @@ class A3OB_OT_proxy_extract(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_proxy_copy(bpy.types.Operator):
+class DZOB_OT_proxy_copy(bpy.types.Operator):
     """Copy proxy to LOD objects"""
     
-    bl_idname = "a3ob.proxy_copy"
+    bl_idname = "dzob.proxy_copy"
     bl_label = "Copy Proxy"
     bl_options = {'REGISTER', 'UNDO'}
     
@@ -691,7 +691,7 @@ class A3OB_OT_proxy_copy(bpy.types.Operator):
         split = layout.split(factor=0.5)
         split.label(text="Object Name")
         split.label(text="LOD Type")
-        layout.template_list("A3OB_UL_lod_objects_selector", "A3OB_proxies_copy", scene_props, "lod_objects", scene_props, "lod_objects_index")
+        layout.template_list("DZOB_UL_lod_objects_selector", "DZOB_proxies_copy", scene_props, "lod_objects", scene_props, "lod_objects_index")
     
     def execute(self, context):
         proxy_object = context.active_object
@@ -711,10 +711,10 @@ class A3OB_OT_proxy_copy(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_proxy_copy_all(bpy.types.Operator):
+class DZOB_OT_proxy_copy_all(bpy.types.Operator):
     """Copy all proxies from a LOD object to another"""
     
-    bl_idname = "a3ob.proxy_copy_all"
+    bl_idname = "dzob.proxy_copy_all"
     bl_label = "Copy Proxies"
     bl_options = {'REGISTER', 'UNDO'}
     
@@ -763,10 +763,10 @@ class A3OB_OT_proxy_copy_all(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_proxy_transfer(bpy.types.Operator):
+class DZOB_OT_proxy_transfer(bpy.types.Operator):
     """Transfer proxies to a different LOD object"""
     
-    bl_idname = "a3ob.proxy_transfer"
+    bl_idname = "dzob.proxy_transfer"
     bl_label = "Transfer Proxies"
     bl_options = {'REGISTER', 'UNDO'}
     
@@ -812,7 +812,7 @@ class A3OB_OT_proxy_transfer(bpy.types.Operator):
         return {'FINISHED'}
     
 
-class A3OB_PT_proxies(bpy.types.Panel):
+class DZOB_PT_proxies(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = "Object Builder"
@@ -833,24 +833,24 @@ class A3OB_PT_proxies(bpy.types.Panel):
         scene_props = context.scene.a3ob_proxies
 
         row_live = layout.row(align=True)
-        row_live.operator("a3ob.proxy_live_preview_toggle", icon='HIDE_OFF', depress=scene_props.live_preview)
-        row_live.operator("a3ob.proxy_live_preview_refresh", text="", icon_value=get_icon("op_refresh"))
+        row_live.operator("dzob.proxy_live_preview_toggle", icon='HIDE_OFF', depress=scene_props.live_preview)
+        row_live.operator("dzob.proxy_live_preview_refresh", text="", icon_value=get_icon("op_refresh"))
 
         row_mode = layout.row(align=True)
         row_mode.prop(scene_props, "live_preview_mode", expand=True)
         
         col_align = layout.column(align=True)
-        col_align.operator("a3ob.proxy_align", icon_value=get_icon("op_proxy_align"))
-        col_align.operator("a3ob.proxy_align_object", icon_value=get_icon("op_proxy_align_object"))
-        layout.operator("a3ob.proxy_realign_ocs", icon_value=get_icon("op_proxy_realign"))
-        layout.operator("a3ob.proxy_extract", icon_value=get_icon("op_proxy_extract"))
+        col_align.operator("dzob.proxy_align", icon_value=get_icon("op_proxy_align"))
+        col_align.operator("dzob.proxy_align_object", icon_value=get_icon("op_proxy_align_object"))
+        layout.operator("dzob.proxy_realign_ocs", icon_value=get_icon("op_proxy_realign"))
+        layout.operator("dzob.proxy_extract", icon_value=get_icon("op_proxy_extract"))
         col_move = layout.column(align=True)
-        col_move.operator("a3ob.proxy_copy", icon_value=get_icon("op_proxy_copy"))
-        col_move.operator("a3ob.proxy_copy_all", icon_value=get_icon("op_proxy_copy_all"))
-        col_move.operator("a3ob.proxy_transfer", icon_value=get_icon("op_proxy_transfer"))
+        col_move.operator("dzob.proxy_copy", icon_value=get_icon("op_proxy_copy"))
+        col_move.operator("dzob.proxy_copy_all", icon_value=get_icon("op_proxy_copy_all"))
+        col_move.operator("dzob.proxy_transfer", icon_value=get_icon("op_proxy_transfer"))
 
 
-class A3OB_UL_lod_objects_selector(bpy.types.UIList):
+class DZOB_UL_lod_objects_selector(bpy.types.UIList):
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname):
         row = layout.row(align=True)
         row.prop(item, "enabled", text="")
@@ -859,17 +859,17 @@ class A3OB_UL_lod_objects_selector(bpy.types.UIList):
 
 
 classes = (
-    A3OB_OT_proxy_align,
-    A3OB_OT_proxy_align_object,
-    A3OB_OT_proxy_realign_ocs,
-    A3OB_OT_proxy_extract,
-    A3OB_OT_proxy_live_preview_toggle,
-    A3OB_OT_proxy_live_preview_refresh,
-    A3OB_OT_proxy_copy,
-    A3OB_OT_proxy_copy_all,
-    A3OB_OT_proxy_transfer,
-    A3OB_PT_proxies,
-    A3OB_UL_lod_objects_selector
+    DZOB_OT_proxy_align,
+    DZOB_OT_proxy_align_object,
+    DZOB_OT_proxy_realign_ocs,
+    DZOB_OT_proxy_extract,
+    DZOB_OT_proxy_live_preview_toggle,
+    DZOB_OT_proxy_live_preview_refresh,
+    DZOB_OT_proxy_copy,
+    DZOB_OT_proxy_copy_all,
+    DZOB_OT_proxy_transfer,
+    DZOB_PT_proxies,
+    DZOB_UL_lod_objects_selector
 )
 
 

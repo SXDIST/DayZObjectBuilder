@@ -45,12 +45,12 @@ def tag_view3d_redraw(self, context):
                 area.tag_redraw()
 
 
-class A3OB_PG_outliner_proxy(bpy.types.PropertyGroup):
+class DZOB_PG_outliner_proxy(bpy.types.PropertyGroup):
     obj: bpy.props.StringProperty(name="Object Name")
     name: bpy.props.StringProperty(name="Proxy Type")
 
 
-class A3OB_PG_outliner_lod(bpy.types.PropertyGroup):
+class DZOB_PG_outliner_lod(bpy.types.PropertyGroup):
     obj: bpy.props.StringProperty(name="Object Name")
     name: bpy.props.StringProperty(name="LOD Type")
     priority: bpy.props.FloatProperty(name="LOD Priority")
@@ -58,11 +58,11 @@ class A3OB_PG_outliner_lod(bpy.types.PropertyGroup):
     subobject_count: bpy.props.IntProperty(name="Sub-object Count")
 
 
-class A3OB_PG_outliner(bpy.types.PropertyGroup):
+class DZOB_PG_outliner(bpy.types.PropertyGroup):
     show_hidden: bpy.props.BoolProperty(name="Show Hidden Objects")
-    lods: bpy.props.CollectionProperty(type=A3OB_PG_outliner_lod)
+    lods: bpy.props.CollectionProperty(type=DZOB_PG_outliner_lod)
     lods_index: bpy.props.IntProperty(name="Selection Index")
-    proxies: bpy.props.CollectionProperty(type=A3OB_PG_outliner_proxy)
+    proxies: bpy.props.CollectionProperty(type=DZOB_PG_outliner_proxy)
     proxies_index: bpy.props.IntProperty(name="Selection Index")
 
     def clear(self):
@@ -72,19 +72,19 @@ class A3OB_PG_outliner(bpy.types.PropertyGroup):
         self.proxies_index = -1
 
 
-class A3OB_PG_proxy_access(bpy.types.PropertyGroup):
-    proxies: bpy.props.CollectionProperty(type=A3OB_PG_outliner_proxy)
+class DZOB_PG_proxy_access(bpy.types.PropertyGroup):
+    proxies: bpy.props.CollectionProperty(type=DZOB_PG_outliner_proxy)
     proxies_index: bpy.props.IntProperty(name="Selection Index")
 
 
-class A3OB_PG_lod_object(bpy.types.PropertyGroup):
+class DZOB_PG_lod_object(bpy.types.PropertyGroup):
     name: bpy.props.StringProperty(name="Object Name")
     lod: bpy.props.StringProperty(name="LOD type")
     enabled: bpy.props.BoolProperty(name="Enabled")
 
 
-class A3OB_PG_proxies(bpy.types.PropertyGroup):
-    lod_objects: bpy.props.CollectionProperty(type=A3OB_PG_lod_object)
+class DZOB_PG_proxies(bpy.types.PropertyGroup):
+    lod_objects: bpy.props.CollectionProperty(type=DZOB_PG_lod_object)
     lod_objects_index: bpy.props.IntProperty(name="Selection Index")
     live_preview: bpy.props.BoolProperty(
         name = "Live Editing",
@@ -102,18 +102,18 @@ class A3OB_PG_proxies(bpy.types.PropertyGroup):
     )
 
 
-class A3OB_PG_common_data_item(bpy.types.PropertyGroup):
+class DZOB_PG_common_data_item(bpy.types.PropertyGroup):
     name: bpy.props.StringProperty(name="Name", description="Descriptive name of the common item")
     value: bpy.props.StringProperty(name="Value", description="Value of the common item")
     type: bpy.props.StringProperty(name="Type", description="Context type of the common item")
 
 
-class A3OB_PG_common_data(bpy.types.PropertyGroup):
-    items: bpy.props.CollectionProperty(type=A3OB_PG_common_data_item)
+class DZOB_PG_common_data(bpy.types.PropertyGroup):
+    items: bpy.props.CollectionProperty(type=DZOB_PG_common_data_item)
     items_index: bpy.props.IntProperty(name="Selection Index")
 
 
-class A3OB_PG_mass_editor_stats(bpy.types.PropertyGroup):
+class DZOB_PG_mass_editor_stats(bpy.types.PropertyGroup):
     mass_max: bpy.props.FloatProperty(
         name = "Max Mass",
         description = "Highest vertex/component mass value on the mesh",
@@ -146,7 +146,7 @@ class A3OB_PG_mass_editor_stats(bpy.types.PropertyGroup):
     )
 
 
-class A3OB_PG_mass_editor(bpy.types.PropertyGroup):
+class DZOB_PG_mass_editor(bpy.types.PropertyGroup):
     enabled: bpy.props.BoolProperty(
         name = "Enable Vertex Mass Tools",
         description = "Dynamic calculation of the vertex masses can be performace heavy on large meshes"
@@ -246,10 +246,10 @@ class A3OB_PG_mass_editor(bpy.types.PropertyGroup):
         description = "Name of the vertex color layer to use/create for visualization",
         default = "Vertex Masses"
     )
-    stats: bpy.props.PointerProperty(type=A3OB_PG_mass_editor_stats)
+    stats: bpy.props.PointerProperty(type=DZOB_PG_mass_editor_stats)
 
 
-class A3OB_PG_hitpoint_generator(bpy.types.PropertyGroup):
+class DZOB_PG_hitpoint_generator(bpy.types.PropertyGroup):
     source: bpy.props.PointerProperty(
         type=bpy.types.Object,
         name = "Source",
@@ -274,7 +274,7 @@ class A3OB_PG_hitpoint_generator(bpy.types.PropertyGroup):
     selection: bpy.props.StringProperty(name="Selection", description="Vertex group to add the generated points to")
 
 
-class A3OB_PG_validation(bpy.types.PropertyGroup):
+class DZOB_PG_validation(bpy.types.PropertyGroup):
     detect: bpy.props.BoolProperty(
         name="Detect Type",
         description="Detect LOD type when set",
@@ -298,7 +298,7 @@ class A3OB_PG_validation(bpy.types.PropertyGroup):
     )
 
  
-class A3OB_PG_conversion(bpy.types.PropertyGroup):
+class DZOB_PG_conversion(bpy.types.PropertyGroup):
     use_selection: bpy.props.BoolProperty(name="Selected Only", description="Convert only selected objects")
     types: bpy.props.EnumProperty(
         name = "Object Types",
@@ -317,11 +317,11 @@ class A3OB_PG_conversion(bpy.types.PropertyGroup):
     )
 
 
-class A3OB_PG_renamable(bpy.types.PropertyGroup):
+class DZOB_PG_renamable(bpy.types.PropertyGroup):
     path: bpy.props.StringProperty(name = "From", description = "File path")
 
 
-class A3OB_PG_renaming(bpy.types.PropertyGroup):
+class DZOB_PG_renaming(bpy.types.PropertyGroup):
     source_filter: bpy.props.EnumProperty(
         name = "Filter",
         description = "",
@@ -333,7 +333,7 @@ class A3OB_PG_renaming(bpy.types.PropertyGroup):
         options = {'ENUM_FLAG'},
         default = {'TEX','RVMAT', 'PROXY'}
     )
-    path_list: bpy.props.CollectionProperty(type=A3OB_PG_renamable)
+    path_list: bpy.props.CollectionProperty(type=DZOB_PG_renamable)
     path_list_index: bpy.props.IntProperty(name="Selection Index")
     new_path: bpy.props.StringProperty(
         name = "To",
@@ -359,7 +359,7 @@ class A3OB_PG_renaming(bpy.types.PropertyGroup):
     )
 
 
-class A3OB_PG_colors(bpy.types.PropertyGroup):
+class DZOB_PG_colors(bpy.types.PropertyGroup):
     input_type: bpy.props.EnumProperty(
         name = "Input Type",
         description = "Color space of the input value",
@@ -487,22 +487,22 @@ class A3OB_PG_colors(bpy.types.PropertyGroup):
     )
 
 
-class A3OB_PG_rigging_bone(bpy.types.PropertyGroup):
+class DZOB_PG_rigging_bone(bpy.types.PropertyGroup):
     name: bpy.props.StringProperty(name="Name", description="Name of the bone item")
     parent: bpy.props.StringProperty(name="Parent", description="Name of the parent bone")
 
 
-class A3OB_PG_rigging_skeleton(bpy.types.PropertyGroup):
+class DZOB_PG_rigging_skeleton(bpy.types.PropertyGroup):
     name: bpy.props.StringProperty(name="Name", description="Name of the skeleton")
     protected: bpy.props.BoolProperty(name="Protected", description="Skeleton is protected and cannot be modified")
-    bones: bpy.props.CollectionProperty(type=A3OB_PG_rigging_bone)
+    bones: bpy.props.CollectionProperty(type=DZOB_PG_rigging_bone)
     bones_index: bpy.props.IntProperty(name="Selection Index")
 
 
-class A3OB_PG_rigging(bpy.types.PropertyGroup):
-    skeletons: bpy.props.CollectionProperty(type=A3OB_PG_rigging_skeleton)
+class DZOB_PG_rigging(bpy.types.PropertyGroup):
+    skeletons: bpy.props.CollectionProperty(type=DZOB_PG_rigging_skeleton)
     skeletons_index: bpy.props.IntProperty(name="Active Skeleton Index", description="Double click to rename")
-    bones: bpy.props.CollectionProperty(type=A3OB_PG_rigging_bone) # empty collection to show when no skeleton is selected
+    bones: bpy.props.CollectionProperty(type=DZOB_PG_rigging_bone) # empty collection to show when no skeleton is selected
     bones_index: bpy.props.IntProperty(name="Selection Index", description="Double click to rename or change parent") # empty collection to show when no skeleton is selected
     prune_threshold: bpy.props.FloatProperty(
         name = "Threshold",
@@ -514,13 +514,13 @@ class A3OB_PG_rigging(bpy.types.PropertyGroup):
     )
 
 
-class A3OB_PG_materials_template(bpy.types.PropertyGroup):
+class DZOB_PG_materials_template(bpy.types.PropertyGroup):
     name: bpy.props.StringProperty()
     path: bpy.props.StringProperty()
 
 
-class A3OB_PG_materials(bpy.types.PropertyGroup):
-    templates: bpy.props.CollectionProperty(type=A3OB_PG_materials_template)
+class DZOB_PG_materials(bpy.types.PropertyGroup):
+    templates: bpy.props.CollectionProperty(type=DZOB_PG_materials_template)
     templates_index: bpy.props.IntProperty(name="Selection Index", description="")
     folder: bpy.props.StringProperty(
         name = "Folder",
@@ -557,27 +557,27 @@ class A3OB_PG_materials(bpy.types.PropertyGroup):
 
 
 classes = (
-    A3OB_PG_outliner_proxy,
-    A3OB_PG_outliner_lod,
-    A3OB_PG_outliner,
-    A3OB_PG_lod_object,
-    A3OB_PG_proxies,
-    A3OB_PG_common_data_item,
-    A3OB_PG_common_data,
-    A3OB_PG_mass_editor_stats,
-    A3OB_PG_mass_editor,
-    A3OB_PG_hitpoint_generator,
-    A3OB_PG_validation,
-    A3OB_PG_conversion,
-    A3OB_PG_renamable,
-    A3OB_PG_renaming,
-    A3OB_PG_colors,
-    A3OB_PG_rigging_bone,
-    A3OB_PG_rigging_skeleton,
-    A3OB_PG_rigging,
-    A3OB_PG_proxy_access,
-    A3OB_PG_materials_template,
-    A3OB_PG_materials
+    DZOB_PG_outliner_proxy,
+    DZOB_PG_outliner_lod,
+    DZOB_PG_outliner,
+    DZOB_PG_lod_object,
+    DZOB_PG_proxies,
+    DZOB_PG_common_data_item,
+    DZOB_PG_common_data,
+    DZOB_PG_mass_editor_stats,
+    DZOB_PG_mass_editor,
+    DZOB_PG_hitpoint_generator,
+    DZOB_PG_validation,
+    DZOB_PG_conversion,
+    DZOB_PG_renamable,
+    DZOB_PG_renaming,
+    DZOB_PG_colors,
+    DZOB_PG_rigging_bone,
+    DZOB_PG_rigging_skeleton,
+    DZOB_PG_rigging,
+    DZOB_PG_proxy_access,
+    DZOB_PG_materials_template,
+    DZOB_PG_materials
 )
 
 
@@ -585,18 +585,18 @@ def register():
     for cls in classes:
         bpy.utils.register_class(cls)
         
-    bpy.types.Scene.a3ob_outliner = bpy.props.PointerProperty(type=A3OB_PG_outliner)
-    bpy.types.Scene.a3ob_proxies = bpy.props.PointerProperty(type=A3OB_PG_proxies)
-    bpy.types.Scene.a3ob_commons = bpy.props.PointerProperty(type=A3OB_PG_common_data)
-    bpy.types.Scene.a3ob_mass_editor = bpy.props.PointerProperty(type=A3OB_PG_mass_editor)
-    bpy.types.Scene.a3ob_hitpoint_generator = bpy.props.PointerProperty(type=A3OB_PG_hitpoint_generator)
-    bpy.types.Scene.a3ob_validation = bpy.props.PointerProperty(type=A3OB_PG_validation)
-    bpy.types.Scene.a3ob_conversion = bpy.props.PointerProperty(type=A3OB_PG_conversion)
-    bpy.types.Scene.a3ob_renaming = bpy.props.PointerProperty(type=A3OB_PG_renaming)
-    bpy.types.Scene.a3ob_rigging = bpy.props.PointerProperty(type=A3OB_PG_rigging)
-    bpy.types.Scene.a3ob_colors = bpy.props.PointerProperty(type=A3OB_PG_colors)
-    bpy.types.Scene.a3ob_proxy_access = bpy.props.PointerProperty(type=A3OB_PG_proxy_access)
-    bpy.types.Scene.a3ob_materials = bpy.props.PointerProperty(type=A3OB_PG_materials)
+    bpy.types.Scene.a3ob_outliner = bpy.props.PointerProperty(type=DZOB_PG_outliner)
+    bpy.types.Scene.a3ob_proxies = bpy.props.PointerProperty(type=DZOB_PG_proxies)
+    bpy.types.Scene.a3ob_commons = bpy.props.PointerProperty(type=DZOB_PG_common_data)
+    bpy.types.Scene.a3ob_mass_editor = bpy.props.PointerProperty(type=DZOB_PG_mass_editor)
+    bpy.types.Scene.a3ob_hitpoint_generator = bpy.props.PointerProperty(type=DZOB_PG_hitpoint_generator)
+    bpy.types.Scene.a3ob_validation = bpy.props.PointerProperty(type=DZOB_PG_validation)
+    bpy.types.Scene.a3ob_conversion = bpy.props.PointerProperty(type=DZOB_PG_conversion)
+    bpy.types.Scene.a3ob_renaming = bpy.props.PointerProperty(type=DZOB_PG_renaming)
+    bpy.types.Scene.a3ob_rigging = bpy.props.PointerProperty(type=DZOB_PG_rigging)
+    bpy.types.Scene.a3ob_colors = bpy.props.PointerProperty(type=DZOB_PG_colors)
+    bpy.types.Scene.a3ob_proxy_access = bpy.props.PointerProperty(type=DZOB_PG_proxy_access)
+    bpy.types.Scene.a3ob_materials = bpy.props.PointerProperty(type=DZOB_PG_materials)
     
     print("\t" + "Properties: scene")
     

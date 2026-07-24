@@ -25,7 +25,7 @@ def proxy_name_update(self, context):
 
 
 if bl_version >= (3, 3, 0):
-    class A3OB_PG_properties_named_property(bpy.types.PropertyGroup):
+    class DZOB_PG_properties_named_property(bpy.types.PropertyGroup):
         name: bpy.props.StringProperty(
             name = "Name",
             description = "Property name",
@@ -41,7 +41,7 @@ if bl_version >= (3, 3, 0):
             search_options = {'SORT', 'SUGGESTION'}
         )
 else:
-    class A3OB_PG_properties_named_property(bpy.types.PropertyGroup):
+    class DZOB_PG_properties_named_property(bpy.types.PropertyGroup):
         name: bpy.props.StringProperty(
             name = "Name",
             description = "Property name",
@@ -54,7 +54,7 @@ else:
         )
 
 
-class A3OB_PG_properties_flag_vertex(bpy.types.PropertyGroup):
+class DZOB_PG_properties_flag_vertex(bpy.types.PropertyGroup):
     name: bpy.props.StringProperty(name="Name", description="Name of the vertex flag group")
     surface: bpy.props.EnumProperty(
         name = "Surface",
@@ -113,7 +113,7 @@ class A3OB_PG_properties_flag_vertex(bpy.types.PropertyGroup):
         flagutils.set_flag_vertex(self, value)
 
 
-class A3OB_PG_properties_flag_face(bpy.types.PropertyGroup):
+class DZOB_PG_properties_flag_face(bpy.types.PropertyGroup):
     name: bpy.props.StringProperty(name="Name", description="Name of the face flag group")
     lighting: bpy.props.EnumProperty(
         name = "Lighting & Shadows",
@@ -150,7 +150,7 @@ class A3OB_PG_properties_flag_face(bpy.types.PropertyGroup):
         flagutils.set_flag_face(self, value)
 
 
-class A3OB_PG_properties_lod_copy(bpy.types.PropertyGroup):
+class DZOB_PG_properties_lod_copy(bpy.types.PropertyGroup):
     lod: bpy.props.EnumProperty(
         name = "LOD Type",
         description = "Type of LOD",
@@ -175,10 +175,10 @@ class A3OB_PG_properties_lod_copy(bpy.types.PropertyGroup):
     )
 
 
-class A3OB_PG_properties_object_mesh(bpy.types.PropertyGroup):
+class DZOB_PG_properties_object_mesh(bpy.types.PropertyGroup):
     is_a3_lod: bpy.props.BoolProperty(
-        name = "Arma 3 LOD",
-        description = "This object is a LOD for an Arma 3 P3D"
+        name = "LOD",
+        description = "This object is a LOD for a P3D"
     )
     lod: bpy.props.EnumProperty(
         name = "LOD Type",
@@ -205,13 +205,13 @@ class A3OB_PG_properties_object_mesh(bpy.types.PropertyGroup):
     properties: bpy.props.CollectionProperty(
         name = "Named Properties",
         description = "Named properties associated with the LOD",
-        type = A3OB_PG_properties_named_property
+        type = DZOB_PG_properties_named_property
     )
     property_index: bpy.props.IntProperty(name="Active Property Index", description="Double click to change name and value")
     copies: bpy.props.CollectionProperty(
         name = "Copies",
         description = "LODs to copy the edited LOD to",
-        type = A3OB_PG_properties_lod_copy
+        type = DZOB_PG_properties_lod_copy
     )
     copies_index: bpy.props.IntProperty(name="Active Copy Index", description="")
 
@@ -219,24 +219,24 @@ class A3OB_PG_properties_object_mesh(bpy.types.PropertyGroup):
         return lodutils.format_lod_name(int(self.lod), self.resolution)
 
 
-class A3OB_PG_properties_object_flags(bpy.types.PropertyGroup):
+class DZOB_PG_properties_object_flags(bpy.types.PropertyGroup):
     vertex: bpy.props.CollectionProperty(
         name = "Vertex Flag Groups",
         description = "Vertex flag groups used in the LOD",
-        type = A3OB_PG_properties_flag_vertex
+        type = DZOB_PG_properties_flag_vertex
     )
     vertex_index: bpy.props.IntProperty(name="Vertex Flag Group Index")
     face: bpy.props.CollectionProperty(
         name = "Active Face Flag Groups",
         description = "Face flag groups used in the LOD",
-        type = A3OB_PG_properties_flag_face
+        type = DZOB_PG_properties_flag_face
     )
     face_index: bpy.props.IntProperty(name="Active Face Flag Group Index")
 
 
-class A3OB_PG_properties_object_proxy(bpy.types.PropertyGroup):
+class DZOB_PG_properties_object_proxy(bpy.types.PropertyGroup):
     is_a3_proxy: bpy.props.BoolProperty(
-        name = "Arma 3 Model Proxy",
+        name = "Model Proxy",
         description = "This object is a proxy (cannot change manually)",
         update = proxy_name_update
     )
@@ -272,7 +272,7 @@ class A3OB_PG_properties_object_proxy(bpy.types.PropertyGroup):
         return name
 
 
-class A3OB_PG_properties_object_dtm(bpy.types.PropertyGroup):
+class DZOB_PG_properties_object_dtm(bpy.types.PropertyGroup):
     data_type: bpy.props.EnumProperty(
         name = "Data Type",
         description = "Type of data arrangement",
@@ -340,14 +340,14 @@ def depsgraph_update_post_handler(scene, depsgraph):
 
 
 classes = (
-    A3OB_PG_properties_named_property,
-    A3OB_PG_properties_flag_vertex,
-    A3OB_PG_properties_flag_face,
-    A3OB_PG_properties_lod_copy,
-    A3OB_PG_properties_object_mesh,
-    A3OB_PG_properties_object_flags,
-    A3OB_PG_properties_object_proxy,
-    A3OB_PG_properties_object_dtm
+    DZOB_PG_properties_named_property,
+    DZOB_PG_properties_flag_vertex,
+    DZOB_PG_properties_flag_face,
+    DZOB_PG_properties_lod_copy,
+    DZOB_PG_properties_object_mesh,
+    DZOB_PG_properties_object_flags,
+    DZOB_PG_properties_object_proxy,
+    DZOB_PG_properties_object_dtm
 )
 
 
@@ -355,10 +355,10 @@ def register():
     for cls in classes:
         bpy.utils.register_class(cls)
         
-    bpy.types.Object.a3ob_properties_object = bpy.props.PointerProperty(type=A3OB_PG_properties_object_mesh)
-    bpy.types.Object.a3ob_properties_object_flags = bpy.props.PointerProperty(type=A3OB_PG_properties_object_flags)
-    bpy.types.Object.a3ob_properties_object_proxy = bpy.props.PointerProperty(type=A3OB_PG_properties_object_proxy)
-    bpy.types.Object.a3ob_properties_object_dtm = bpy.props.PointerProperty(type=A3OB_PG_properties_object_dtm)
+    bpy.types.Object.a3ob_properties_object = bpy.props.PointerProperty(type=DZOB_PG_properties_object_mesh)
+    bpy.types.Object.a3ob_properties_object_flags = bpy.props.PointerProperty(type=DZOB_PG_properties_object_flags)
+    bpy.types.Object.a3ob_properties_object_proxy = bpy.props.PointerProperty(type=DZOB_PG_properties_object_proxy)
+    bpy.types.Object.a3ob_properties_object_dtm = bpy.props.PointerProperty(type=DZOB_PG_properties_object_dtm)
     bpy.types.Object.a3ob_selection_mass = bpy.props.FloatProperty( # Can't be in property group due to reference requirements
         name = "Current Mass",
         description = "Total mass of current selection",

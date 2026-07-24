@@ -5,7 +5,7 @@
 #   
 #   Description:
 #       The script converts objects set up with ATBX (ArmaToolbox) properties to the
-#       A3OB (Arma 3 Object Buikder) setup.
+#       DZOB (DayZ Object Builder) setup.
 #
 #   Usage:
 #       1. switch every object that needs conversion to Object Mode
@@ -293,7 +293,7 @@ def convert_objects_item(obj, object_type, converted_materials, cleanup, logger)
 
 def convert_objects(objects, cleanup):
     logger = ProcessLogger()
-    logger.step("Converting ATBX setup to A3OB")
+    logger.step("Converting ATBX setup to DZOB")
     logger.level_up()
     categories = ('LOD', 'DTM')
     

@@ -3,6 +3,10 @@
 *.zip
 test/
 
+# The bundled DayZ character master rig is part of the add-on and must be
+# tracked despite the *.blend* rule above (MIT, see DZObjectBuilder/data/CREDITS.md).
+!DZObjectBuilder/data/dayz_master_rig.blend
+
 # Local working documents (design specs, implementation plans) and the
 # execution scratch that goes with them. Kept on disk while working, never
 # part of the add-on or its history.
@@ -161,3 +165,13 @@ cython_debug/
 #  and can be added to the global gitignore or merged into this file.  For a more nuclear
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
+
+# Local-only material for the DayZ .xob/.anm importer porting work: decompiled
+# reference tool and binary test fixtures. Kept on disk, never part of the add-on.
+reference/
+tests/.xob/
+tests/.anm/
+*.xob
+*.anm
+*.semodel
+*.seanim

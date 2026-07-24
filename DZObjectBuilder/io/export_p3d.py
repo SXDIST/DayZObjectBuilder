@@ -38,9 +38,9 @@ def can_export(operator, context):
 
 
 def create_temp_collection(context):
-    temp = bpy.data.collections.get("A3OB_temp")
+    temp = bpy.data.collections.get("DZOB_temp")
     if temp is None:
-        temp = bpy.data.collections.new("A3OB_temp")
+        temp = bpy.data.collections.new("DZOB_temp")
         context.scene.collection.children.link(temp)
     
     objects = [obj for obj in temp.objects]

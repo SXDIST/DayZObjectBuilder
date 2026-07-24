@@ -10,10 +10,10 @@ from ..utilities import flags as flagutils
 bl_version = bpy.app.version
 
 
-class A3OB_OT_proxy_add(bpy.types.Operator):
-    """Add an Arma 3 proxy object and parent to the active object"""
+class DZOB_OT_proxy_add(bpy.types.Operator):
+    """Add a proxy object and parent to the active object"""
     
-    bl_idname = "a3ob.proxy_add"
+    bl_idname = "dzob.proxy_add"
     bl_label = "Add Proxy"
     bl_options = {'REGISTER'}
 
@@ -48,10 +48,10 @@ class A3OB_OT_proxy_add(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_proxy_remove(bpy.types.Operator):
-    """Remove an Arma 3 proxy object from the active object"""
+class DZOB_OT_proxy_remove(bpy.types.Operator):
+    """Remove a proxy object from the active object"""
 
-    bl_idname = "a3ob.proxy_remove"
+    bl_idname = "dzob.proxy_remove"
     bl_label = "Remove Proxy"
     bl_options = {'REGISTER'}
 
@@ -75,10 +75,10 @@ class A3OB_OT_proxy_remove(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_paste_common_proxy(bpy.types.Operator):
+class DZOB_OT_paste_common_proxy(bpy.types.Operator):
     """Paste a common proxy model path"""
     
-    bl_idname = "a3ob.paste_common_proxy"
+    bl_idname = "dzob.paste_common_proxy"
     bl_label = "Paste Common Proxy"
     bl_options = {'REGISTER'}
 
@@ -98,7 +98,7 @@ class A3OB_OT_paste_common_proxy(bpy.types.Operator):
     def draw(self, context):
         scene_props = context.scene.a3ob_commons
         layout = self.layout
-        layout.template_list("A3OB_UL_common_data_proxies", "A3OB_proxies_common", scene_props, "items", scene_props, "items_index", item_dyntip_propname="value")
+        layout.template_list("DZOB_UL_common_data_proxies", "DZOB_proxies_common", scene_props, "items", scene_props, "items_index", item_dyntip_propname="value")
     
     def execute(self, context):
         obj = context.scene.objects.get(self.obj, context.object)
@@ -115,10 +115,10 @@ class A3OB_OT_paste_common_proxy(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_namedprops_add(bpy.types.Operator):
+class DZOB_OT_namedprops_add(bpy.types.Operator):
     """Add named property to the active object"""
     
-    bl_idname = "a3ob.namedprops_add"
+    bl_idname = "dzob.namedprops_add"
     bl_label = "Add Named Property"
     bl_options = {'REGISTER', 'UNDO'}
     
@@ -138,10 +138,10 @@ class A3OB_OT_namedprops_add(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_namedprops_remove(bpy.types.Operator):
+class DZOB_OT_namedprops_remove(bpy.types.Operator):
     """Remove named property from the active object"""
     
-    bl_idname = "a3ob.namedprops_remove"
+    bl_idname = "dzob.namedprops_remove"
     bl_label = "Remove Named Property"
     bl_options = {'REGISTER', 'UNDO'}
     
@@ -167,11 +167,11 @@ class A3OB_OT_namedprops_remove(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_paste_common_namedprop(bpy.types.Operator):
+class DZOB_OT_paste_common_namedprop(bpy.types.Operator):
     """Add a common named property"""
     
     bl_label = "Paste Common Named Property"
-    bl_idname = "a3ob.paste_common_namedprop"
+    bl_idname = "dzob.paste_common_namedprop"
     bl_options = {'REGISTER', 'UNDO'}
     
     @classmethod
@@ -186,7 +186,7 @@ class A3OB_OT_paste_common_namedprop(bpy.types.Operator):
     def draw(self, context):
         scene_props = context.scene.a3ob_commons
         layout = self.layout
-        layout.template_list("A3OB_UL_common_data_namedprops", "A3OB_common_namedprops", scene_props, "items", scene_props, "items_index")
+        layout.template_list("DZOB_UL_common_data_namedprops", "DZOB_common_namedprops", scene_props, "items", scene_props, "items_index")
 
     def execute(self, context):
         obj = context.object
@@ -203,10 +203,10 @@ class A3OB_OT_paste_common_namedprop(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_lod_copy_add(bpy.types.Operator):
+class DZOB_OT_lod_copy_add(bpy.types.Operator):
     """Add copy directive to active object"""
     
-    bl_idname = "a3ob.lod_copy_add"
+    bl_idname = "dzob.lod_copy_add"
     bl_label = "Add Copy"
     bl_options = {'REGISTER', 'UNDO'}
     
@@ -224,10 +224,10 @@ class A3OB_OT_lod_copy_add(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_lod_copy_remove(bpy.types.Operator):
+class DZOB_OT_lod_copy_remove(bpy.types.Operator):
     """Remove copy directive from the active object"""
     
-    bl_idname = "a3ob.lod_copy_remove"
+    bl_idname = "dzob.lod_copy_remove"
     bl_label = "Remove Copy"
     bl_options = {'REGISTER', 'UNDO'}
     
@@ -253,11 +253,11 @@ class A3OB_OT_lod_copy_remove(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_flags_vertex_add(bpy.types.Operator):
+class DZOB_OT_flags_vertex_add(bpy.types.Operator):
     """Add a new vertex flag group to the active object"""
     
     bl_label = "Add Vertex Flag Group"
-    bl_idname = "a3ob.flags_vertex_add"
+    bl_idname = "dzob.flags_vertex_add"
     bl_options = {'REGISTER', 'UNDO'}
     
     @classmethod
@@ -276,10 +276,10 @@ class A3OB_OT_flags_vertex_add(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_flags_vertex_remove(bpy.types.Operator):
+class DZOB_OT_flags_vertex_remove(bpy.types.Operator):
     """Remove the active vertex flag group from the active object"""
     
-    bl_idname = "a3ob.flags_vertex_remove"
+    bl_idname = "dzob.flags_vertex_remove"
     bl_label = "Remove Vertex Flag Group"
     bl_options = {'REGISTER', 'UNDO'}
     
@@ -301,11 +301,11 @@ class A3OB_OT_flags_vertex_remove(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_flags_vertex_assign(bpy.types.Operator):
+class DZOB_OT_flags_vertex_assign(bpy.types.Operator):
     """Assign selected vertices to the active vertex flag group"""
     
     bl_label = "Assign"
-    bl_idname = "a3ob.flags_vertex_assign"
+    bl_idname = "dzob.flags_vertex_assign"
     bl_options = {'REGISTER', 'UNDO'}
     
     @classmethod
@@ -321,11 +321,11 @@ class A3OB_OT_flags_vertex_assign(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_flags_vertex_select(bpy.types.Operator):
+class DZOB_OT_flags_vertex_select(bpy.types.Operator):
     """Select all vertices assigned to the active vertex flag group"""
     
     bl_label = "Select"
-    bl_idname = "a3ob.flags_vertex_select"
+    bl_idname = "dzob.flags_vertex_select"
     bl_options = {'REGISTER', 'UNDO'}
     
     @classmethod
@@ -342,11 +342,11 @@ class A3OB_OT_flags_vertex_select(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_flags_vertex_deselect(bpy.types.Operator):
+class DZOB_OT_flags_vertex_deselect(bpy.types.Operator):
     """Deselect all selected vertices assigned to the active vertex flag group"""
     
     bl_label = "Deselect"
-    bl_idname = "a3ob.flags_vertex_deselect"
+    bl_idname = "dzob.flags_vertex_deselect"
     bl_options = {'REGISTER', 'UNDO'}
     
     @classmethod
@@ -363,11 +363,11 @@ class A3OB_OT_flags_vertex_deselect(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_flags_vertex_clear(bpy.types.Operator):
+class DZOB_OT_flags_vertex_clear(bpy.types.Operator):
     """Clear all vertex flag groups from the active object"""
     
     bl_label = "Clear"
-    bl_idname = "a3ob.flags_vertex_clear"
+    bl_idname = "dzob.flags_vertex_clear"
     bl_options = {'REGISTER', 'UNDO'}
     
     @classmethod
@@ -382,11 +382,11 @@ class A3OB_OT_flags_vertex_clear(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_flags_face_add(bpy.types.Operator):
+class DZOB_OT_flags_face_add(bpy.types.Operator):
     """Add a new face flag group to the active object"""
     
     bl_label = "Add Face Flag Group"
-    bl_idname = "a3ob.flags_face_add"
+    bl_idname = "dzob.flags_face_add"
     bl_options = {'REGISTER', 'UNDO'}
     
     @classmethod
@@ -405,10 +405,10 @@ class A3OB_OT_flags_face_add(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_flags_face_remove(bpy.types.Operator):
+class DZOB_OT_flags_face_remove(bpy.types.Operator):
     """Remove the active face flag group from the active object"""
     
-    bl_idname = "a3ob.flags_face_remove"
+    bl_idname = "dzob.flags_face_remove"
     bl_label = "Remove Face Flag Group"
     bl_options = {'REGISTER', 'UNDO'}
     
@@ -430,11 +430,11 @@ class A3OB_OT_flags_face_remove(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_flags_face_assign(bpy.types.Operator):
+class DZOB_OT_flags_face_assign(bpy.types.Operator):
     """Assign selected vertices to the active face flag group"""
     
     bl_label = "Assign"
-    bl_idname = "a3ob.flags_face_assign"
+    bl_idname = "dzob.flags_face_assign"
     bl_options = {'REGISTER', 'UNDO'}
     
     @classmethod
@@ -450,11 +450,11 @@ class A3OB_OT_flags_face_assign(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_flags_face_select(bpy.types.Operator):
+class DZOB_OT_flags_face_select(bpy.types.Operator):
     """Select all vertices assigned to the active face flag group"""
     
     bl_label = "Select"
-    bl_idname = "a3ob.flags_face_select"
+    bl_idname = "dzob.flags_face_select"
     bl_options = {'REGISTER', 'UNDO'}
     
     @classmethod
@@ -471,11 +471,11 @@ class A3OB_OT_flags_face_select(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_flags_face_deselect(bpy.types.Operator):
+class DZOB_OT_flags_face_deselect(bpy.types.Operator):
     """Deselect all selected vertices assigned to the active face flag group"""
     
     bl_label = "Deselect"
-    bl_idname = "a3ob.flags_face_deselect"
+    bl_idname = "dzob.flags_face_deselect"
     bl_options = {'REGISTER', 'UNDO'}
     
     @classmethod
@@ -492,11 +492,11 @@ class A3OB_OT_flags_face_deselect(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_flags_face_clear(bpy.types.Operator):
+class DZOB_OT_flags_face_clear(bpy.types.Operator):
     """Clear all face flag groups from the active object"""
     
     bl_label = "Clear"
-    bl_idname = "a3ob.flags_face_clear"
+    bl_idname = "dzob.flags_face_clear"
     bl_options = {'REGISTER', 'UNDO'}
     
     @classmethod
@@ -511,7 +511,7 @@ class A3OB_OT_flags_face_clear(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_UL_namedprops(bpy.types.UIList):
+class DZOB_UL_namedprops(bpy.types.UIList):
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname):
         layout.alignment = 'LEFT'
         layout.label(text="", icon='PROPERTIES')
@@ -520,7 +520,7 @@ class A3OB_UL_namedprops(bpy.types.UIList):
         layout.prop(item, "value", text="", emboss=bool(bl_version >= (3, 3, 0)))
 
 
-class A3OB_UL_lod_copies(bpy.types.UIList):
+class DZOB_UL_lod_copies(bpy.types.UIList):
     def draw_item(self, context, layout, _data, item, icon, active_data, active_propname):
         layout.alignment = 'LEFT'
         layout.prop(item, "lod", text="", emboss=False)
@@ -531,27 +531,27 @@ class A3OB_UL_lod_copies(bpy.types.UIList):
             layout.prop(item, "resolution_float", text="", emboss=False)
 
 
-class A3OB_UL_common_proxies(bpy.types.UIList):
+class DZOB_UL_common_proxies(bpy.types.UIList):
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname):
         layout.label(text=item.name)
 
 
-class A3OB_UL_flags_vertex(bpy.types.UIList):
+class DZOB_UL_flags_vertex(bpy.types.UIList):
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname):
         layout.prop(item, "name", text="", emboss=False)
         layout.label(text=("%08x" % item.get_flag()))
 
 
-class A3OB_UL_flags_face(bpy.types.UIList):
+class DZOB_UL_flags_face(bpy.types.UIList):
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname):
         layout.prop(item, "name", text="", emboss=False)
         layout.label(text=("%08x" % item.get_flag()))
 
 
-class A3OB_UL_proxy_access(bpy.types.UIList):
+class DZOB_UL_proxy_access(bpy.types.UIList):
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname):
         row = layout.row(align=True)
-        op = row.operator("a3ob.select_object", text="", icon='RESTRICT_SELECT_OFF', emboss=False)
+        op = row.operator("dzob.select_object", text="", icon='RESTRICT_SELECT_OFF', emboss=False)
         op.object_name = item.obj
         row.label(text=" %s" % item.name)
     
@@ -566,7 +566,7 @@ class A3OB_UL_proxy_access(bpy.types.UIList):
         return flt_flags, flt_neworder
 
 
-class A3OB_PT_object_mesh(bpy.types.Panel):
+class DZOB_PT_object_mesh(bpy.types.Panel):
     bl_region_type = 'WINDOW'
     bl_space_type = 'PROPERTIES'
     bl_label = "Object Builder: LOD Properties"
@@ -603,12 +603,12 @@ class A3OB_PT_object_mesh(bpy.types.Panel):
                 layout.prop(object_props, "resolution_float")
 
 
-class A3OB_PT_object_mesh_namedprops(bpy.types.Panel):
+class DZOB_PT_object_mesh_namedprops(bpy.types.Panel):
     bl_region_type = 'WINDOW'
     bl_space_type = 'PROPERTIES'
     bl_label = "Named Properties"
     bl_context = "data"
-    bl_parent_id = "A3OB_PT_object_mesh"
+    bl_parent_id = "DZOB_PT_object_mesh"
     bl_options = {'DEFAULT_CLOSED'}
     
     @classmethod
@@ -623,21 +623,21 @@ class A3OB_PT_object_mesh_namedprops(bpy.types.Panel):
         layout = self.layout
         row = layout.row()
         col_list = row.column()
-        col_list.template_list("A3OB_UL_namedprops", "A3OB_namedprops", object_props, "properties", object_props, "property_index")
+        col_list.template_list("DZOB_UL_namedprops", "DZOB_namedprops", object_props, "properties", object_props, "property_index")
             
         col_operators = row.column(align=True)
-        col_operators.operator("a3ob.namedprops_add", text="", icon='ADD')
-        col_operators.operator("a3ob.namedprops_remove", text="", icon='REMOVE')
+        col_operators.operator("dzob.namedprops_add", text="", icon='ADD')
+        col_operators.operator("dzob.namedprops_remove", text="", icon='REMOVE')
         col_operators.separator()
-        col_operators.operator("a3ob.paste_common_namedprop", icon='PASTEDOWN', text="")
+        col_operators.operator("dzob.paste_common_namedprop", icon='PASTEDOWN', text="")
 
 
-class A3OB_PT_object_mesh_proxies(bpy.types.Panel):
+class DZOB_PT_object_mesh_proxies(bpy.types.Panel):
     bl_region_type = 'WINDOW'
     bl_space_type = 'PROPERTIES'
     bl_label = "Proxy Access"
     bl_context = "data"
-    bl_parent_id = "A3OB_PT_object_mesh"
+    bl_parent_id = "DZOB_PT_object_mesh"
     bl_options = {'DEFAULT_CLOSED'}
     
     @classmethod
@@ -652,12 +652,12 @@ class A3OB_PT_object_mesh_proxies(bpy.types.Panel):
         layout = self.layout
         row = layout.row()
         col_list = row.column()
-        col_list.template_list("A3OB_UL_proxy_access", "A3OB_proxy_access", scene_props, "proxies", scene_props, "proxies_index")
+        col_list.template_list("DZOB_UL_proxy_access", "DZOB_proxy_access", scene_props, "proxies", scene_props, "proxies_index")
 
         col_operators = row.column(align=True)
-        op_add = col_operators.operator("a3ob.proxy_add", text="", icon='ADD')
+        op_add = col_operators.operator("dzob.proxy_add", text="", icon='ADD')
         op_add.parent = context.object.name
-        op_remove = col_operators.operator("a3ob.proxy_remove", text="", icon='REMOVE')
+        op_remove = col_operators.operator("dzob.proxy_remove", text="", icon='REMOVE')
 
         if not utils.is_valid_idx(scene_props.proxies_index, scene_props.proxies):
             return
@@ -669,18 +669,18 @@ class A3OB_PT_object_mesh_proxies(bpy.types.Panel):
         op_remove.obj = proxy.name
         proxy_props = proxy.a3ob_properties_object_proxy
         row_path = col_list.row(align=True)
-        op_common = row_path.operator("a3ob.paste_common_proxy", text="", icon='PASTEDOWN')
+        op_common = row_path.operator("dzob.paste_common_proxy", text="", icon='PASTEDOWN')
         op_common.obj = proxy.name
         row_path.prop(proxy_props, "proxy_path", text="", icon='MESH_CUBE')
         col_list.prop(proxy_props, "proxy_index")
 
 
-class A3OB_PT_object_mesh_copies(bpy.types.Panel):
+class DZOB_PT_object_mesh_copies(bpy.types.Panel):
     bl_region_type = 'WINDOW'
     bl_space_type = 'PROPERTIES'
     bl_label = "Copies"
     bl_context = "data"
-    bl_parent_id = "A3OB_PT_object_mesh"
+    bl_parent_id = "DZOB_PT_object_mesh"
     bl_options = {'DEFAULT_CLOSED'}
     
     @classmethod
@@ -695,14 +695,14 @@ class A3OB_PT_object_mesh_copies(bpy.types.Panel):
         layout = self.layout
         row = layout.row()
         col_list = row.column()
-        col_list.template_list("A3OB_UL_lod_copies", "A3OB_lod_copies", object_props, "copies", object_props, "copies_index")
+        col_list.template_list("DZOB_UL_lod_copies", "DZOB_lod_copies", object_props, "copies", object_props, "copies_index")
             
         col_operators = row.column(align=True)
-        col_operators.operator("a3ob.lod_copy_add", text="", icon='ADD')
-        col_operators.operator("a3ob.lod_copy_remove", text="", icon='REMOVE')
+        col_operators.operator("dzob.lod_copy_add", text="", icon='ADD')
+        col_operators.operator("dzob.lod_copy_remove", text="", icon='REMOVE')
 
 
-class A3OB_PT_object_mesh_flags(bpy.types.Panel):
+class DZOB_PT_object_mesh_flags(bpy.types.Panel):
     bl_region_type = 'WINDOW'
     bl_space_type = 'PROPERTIES'
     bl_label = "Object Builder: Flag Groups"
@@ -723,12 +723,12 @@ class A3OB_PT_object_mesh_flags(bpy.types.Panel):
         pass
 
 
-class A3OB_PT_object_mesh_flags_vertex(bpy.types.Panel):
+class DZOB_PT_object_mesh_flags_vertex(bpy.types.Panel):
     bl_region_type = 'WINDOW'
     bl_space_type = 'PROPERTIES'
     bl_label = "Vertex Flag Groups"
     bl_context = "data"
-    bl_parent_id = "A3OB_PT_object_mesh_flags"
+    bl_parent_id = "DZOB_PT_object_mesh_flags"
     bl_options = {'DEFAULT_CLOSED'}
     
     @classmethod
@@ -743,7 +743,7 @@ class A3OB_PT_object_mesh_flags_vertex(bpy.types.Panel):
         layout = self.layout
         row = layout.row()
         col_list = row.column()
-        col_list.template_list("A3OB_UL_flags_vertex", "A3OB_flags_vertex", flag_props, "vertex", flag_props, "vertex_index")
+        col_list.template_list("DZOB_UL_flags_vertex", "DZOB_flags_vertex", flag_props, "vertex", flag_props, "vertex_index")
         
         layout.use_property_split = True
         layout.use_property_decorate = False
@@ -751,9 +751,9 @@ class A3OB_PT_object_mesh_flags_vertex(bpy.types.Panel):
         if utils.is_valid_idx(flag_props.vertex_index, flag_props.vertex):
             if obj.mode == 'EDIT':
                 row_operators = layout.row(align=True)
-                row_operators.operator("a3ob.flags_vertex_assign")
-                row_operators.operator("a3ob.flags_vertex_select")
-                row_operators.operator("a3ob.flags_vertex_deselect")
+                row_operators.operator("dzob.flags_vertex_assign")
+                row_operators.operator("dzob.flags_vertex_select")
+                row_operators.operator("dzob.flags_vertex_deselect")
             
             prop = flag_props.vertex[flag_props.vertex_index]
             layout.prop(prop, "surface")
@@ -764,18 +764,18 @@ class A3OB_PT_object_mesh_flags_vertex(bpy.types.Panel):
             layout.prop(prop, "hidden")
             
         col_operators = row.column(align=True)
-        col_operators.operator("a3ob.flags_vertex_add", text="", icon='ADD')
-        col_operators.operator("a3ob.flags_vertex_remove", text="", icon='REMOVE')
+        col_operators.operator("dzob.flags_vertex_add", text="", icon='ADD')
+        col_operators.operator("dzob.flags_vertex_remove", text="", icon='REMOVE')
         col_operators.separator()
-        col_operators.operator("a3ob.flags_vertex_clear", text="", icon='TRASH')
+        col_operators.operator("dzob.flags_vertex_clear", text="", icon='TRASH')
 
 
-class A3OB_PT_object_mesh_flags_face(bpy.types.Panel):
+class DZOB_PT_object_mesh_flags_face(bpy.types.Panel):
     bl_region_type = 'WINDOW'
     bl_space_type = 'PROPERTIES'
     bl_label = "Face Flag Groups"
     bl_context = "data"
-    bl_parent_id = "A3OB_PT_object_mesh_flags"
+    bl_parent_id = "DZOB_PT_object_mesh_flags"
     bl_options = {'DEFAULT_CLOSED'}
     
     @classmethod
@@ -790,7 +790,7 @@ class A3OB_PT_object_mesh_flags_face(bpy.types.Panel):
         layout = self.layout
         row = layout.row()
         col_list = row.column()
-        col_list.template_list("A3OB_UL_flags_face", "A3OB_flags_face", flag_props, "face", flag_props, "face_index")
+        col_list.template_list("DZOB_UL_flags_face", "DZOB_flags_face", flag_props, "face", flag_props, "face_index")
         
         layout.use_property_split = True
         layout.use_property_decorate = False
@@ -798,9 +798,9 @@ class A3OB_PT_object_mesh_flags_face(bpy.types.Panel):
         if utils.is_valid_idx(flag_props.face_index, flag_props.face):
             if obj.mode == 'EDIT':
                 row_operators = layout.row(align=True)
-                row_operators.operator("a3ob.flags_face_assign")
-                row_operators.operator("a3ob.flags_face_select")
-                row_operators.operator("a3ob.flags_face_deselect")
+                row_operators.operator("dzob.flags_face_assign")
+                row_operators.operator("dzob.flags_face_select")
+                row_operators.operator("dzob.flags_face_deselect")
             
             prop = flag_props.face[flag_props.face_index]
             layout.prop(prop, "lighting")
@@ -810,13 +810,13 @@ class A3OB_PT_object_mesh_flags_face(bpy.types.Panel):
             layout.prop(prop, "user")
             
         col_operators = row.column(align=True)
-        col_operators.operator("a3ob.flags_face_add", text="", icon='ADD')
-        col_operators.operator("a3ob.flags_face_remove", text="", icon='REMOVE')
+        col_operators.operator("dzob.flags_face_add", text="", icon='ADD')
+        col_operators.operator("dzob.flags_face_remove", text="", icon='REMOVE')
         col_operators.separator()
-        col_operators.operator("a3ob.flags_face_clear", text="", icon='TRASH')
+        col_operators.operator("dzob.flags_face_clear", text="", icon='TRASH')
 
 
-class A3OB_PT_object_proxy(bpy.types.Panel):
+class DZOB_PT_object_proxy(bpy.types.Panel):
     bl_region_type = 'WINDOW'
     bl_space_type = 'PROPERTIES'
     bl_label = "Object Builder: Proxy Properties"
@@ -844,7 +844,7 @@ class A3OB_PT_object_proxy(bpy.types.Panel):
         col_enable.enabled = False
         
         row_select = layout.row(align=True)
-        op = row_select.operator("a3ob.select_object", text="Select Parent LOD", icon='RESTRICT_SELECT_OFF')
+        op = row_select.operator("dzob.select_object", text="Select Parent LOD", icon='RESTRICT_SELECT_OFF')
         if obj.parent and obj.parent.type == 'MESH' and obj.parent.a3ob_properties_object.is_a3_lod:
             op.object_name = obj.parent.name
             op.identify_lod = False
@@ -853,12 +853,12 @@ class A3OB_PT_object_proxy(bpy.types.Panel):
         
         layout.separator()
         row_path = layout.row(align=True)
-        row_path.operator("a3ob.paste_common_proxy", text="", icon='PASTEDOWN')
+        row_path.operator("dzob.paste_common_proxy", text="", icon='PASTEDOWN')
         row_path.prop(object_props, "proxy_path", text="", icon='MESH_CUBE')
         layout.prop(object_props, "proxy_index")
 
 
-class A3OB_PT_object_dtm(bpy.types.Panel):
+class DZOB_PT_object_dtm(bpy.types.Panel):
     bl_region_type = 'WINDOW'
     bl_space_type = 'PROPERTIES'
     bl_label = "Object Builder: DTM Properties"
@@ -901,45 +901,45 @@ class A3OB_PT_object_dtm(bpy.types.Panel):
 
 def menu_func(self, context):
     self.layout.separator()
-    self.layout.operator(A3OB_OT_proxy_add.bl_idname, text="Arma 3 Proxy", icon_value=get_icon("op_proxy_add"))
+    self.layout.operator(DZOB_OT_proxy_add.bl_idname, text="Proxy", icon_value=get_icon("op_proxy_add"))
 
 
 classes = (
-    A3OB_OT_proxy_add,
-    A3OB_OT_proxy_remove,
-    A3OB_OT_paste_common_proxy,
-    A3OB_OT_namedprops_add,
-    A3OB_OT_namedprops_remove,
-    A3OB_OT_paste_common_namedprop,
-    A3OB_OT_lod_copy_add,
-    A3OB_OT_lod_copy_remove,
-    A3OB_OT_flags_vertex_add,
-    A3OB_OT_flags_vertex_remove,
-    A3OB_OT_flags_vertex_assign,
-    A3OB_OT_flags_vertex_select,
-    A3OB_OT_flags_vertex_deselect,
-    A3OB_OT_flags_vertex_clear,
-    A3OB_OT_flags_face_add,
-    A3OB_OT_flags_face_remove,
-    A3OB_OT_flags_face_assign,
-    A3OB_OT_flags_face_select,
-    A3OB_OT_flags_face_deselect,
-    A3OB_OT_flags_face_clear,
-    A3OB_UL_namedprops,
-    A3OB_UL_lod_copies,
-    A3OB_UL_common_proxies,
-    A3OB_UL_flags_vertex,
-    A3OB_UL_flags_face,
-    A3OB_UL_proxy_access,
-    A3OB_PT_object_mesh,
-    A3OB_PT_object_mesh_namedprops,
-    A3OB_PT_object_mesh_proxies,
-    A3OB_PT_object_mesh_copies,
-    A3OB_PT_object_proxy,
-    A3OB_PT_object_mesh_flags,
-    A3OB_PT_object_mesh_flags_vertex,
-    A3OB_PT_object_mesh_flags_face,
-    A3OB_PT_object_dtm
+    DZOB_OT_proxy_add,
+    DZOB_OT_proxy_remove,
+    DZOB_OT_paste_common_proxy,
+    DZOB_OT_namedprops_add,
+    DZOB_OT_namedprops_remove,
+    DZOB_OT_paste_common_namedprop,
+    DZOB_OT_lod_copy_add,
+    DZOB_OT_lod_copy_remove,
+    DZOB_OT_flags_vertex_add,
+    DZOB_OT_flags_vertex_remove,
+    DZOB_OT_flags_vertex_assign,
+    DZOB_OT_flags_vertex_select,
+    DZOB_OT_flags_vertex_deselect,
+    DZOB_OT_flags_vertex_clear,
+    DZOB_OT_flags_face_add,
+    DZOB_OT_flags_face_remove,
+    DZOB_OT_flags_face_assign,
+    DZOB_OT_flags_face_select,
+    DZOB_OT_flags_face_deselect,
+    DZOB_OT_flags_face_clear,
+    DZOB_UL_namedprops,
+    DZOB_UL_lod_copies,
+    DZOB_UL_common_proxies,
+    DZOB_UL_flags_vertex,
+    DZOB_UL_flags_face,
+    DZOB_UL_proxy_access,
+    DZOB_PT_object_mesh,
+    DZOB_PT_object_mesh_namedprops,
+    DZOB_PT_object_mesh_proxies,
+    DZOB_PT_object_mesh_copies,
+    DZOB_PT_object_proxy,
+    DZOB_PT_object_mesh_flags,
+    DZOB_PT_object_mesh_flags_vertex,
+    DZOB_PT_object_mesh_flags_face,
+    DZOB_PT_object_dtm
 )
 
 

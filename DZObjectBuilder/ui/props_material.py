@@ -7,11 +7,11 @@ from ..utilities import materials as matutils
 from ..utilities import texsearch
 
 
-class A3OB_OT_material_autosearch(bpy.types.Operator):
+class DZOB_OT_material_autosearch(bpy.types.Operator):
     """Auto-search the texture and RVMAT for the active material from its Base Color image"""
 
     bl_label = "Auto Search Texture"
-    bl_idname = "a3ob.material_autosearch"
+    bl_idname = "dzob.material_autosearch"
     bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
@@ -47,11 +47,11 @@ class A3OB_OT_material_autosearch(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_paste_common_material(bpy.types.Operator):
+class DZOB_OT_paste_common_material(bpy.types.Operator):
     """Paste a common material path"""
     
     bl_label = "Paste Common Material"
-    bl_idname = "a3ob.paste_common_material"
+    bl_idname = "dzob.paste_common_material"
     bl_options = {'REGISTER', 'UNDO'}
     
     @classmethod
@@ -65,7 +65,7 @@ class A3OB_OT_paste_common_material(bpy.types.Operator):
     def draw(self, context):
         scene_props = context.scene.a3ob_commons
         layout = self.layout
-        layout.template_list("A3OB_UL_common_data_materials", "A3OB_common_materials", scene_props, "items", scene_props, "items_index", item_dyntip_propname="value")
+        layout.template_list("DZOB_UL_common_data_materials", "DZOB_common_materials", scene_props, "items", scene_props, "items_index", item_dyntip_propname="value")
 
 
     def execute(self, context):
@@ -80,11 +80,11 @@ class A3OB_OT_paste_common_material(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_OT_paste_common_procedural(bpy.types.Operator):
+class DZOB_OT_paste_common_procedural(bpy.types.Operator):
     """Paste a common procedural texture"""
     
     bl_label = "Paste Common Procedural"
-    bl_idname = "a3ob.paste_common_procedural"
+    bl_idname = "dzob.paste_common_procedural"
     bl_options = {'REGISTER', 'UNDO'}
     
     @classmethod
@@ -98,7 +98,7 @@ class A3OB_OT_paste_common_procedural(bpy.types.Operator):
     def draw(self, context):
         scene_props = context.scene.a3ob_commons
         layout = self.layout
-        layout.template_list("A3OB_UL_common_data_procedurals", "A3OB_common_procedurals", scene_props, "items", scene_props, "items_index", item_dyntip_propname="value")
+        layout.template_list("DZOB_UL_common_data_procedurals", "DZOB_common_procedurals", scene_props, "items", scene_props, "items_index", item_dyntip_propname="value")
 
     def execute(self, context):
         mat = context.material
@@ -112,12 +112,12 @@ class A3OB_OT_paste_common_procedural(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class A3OB_UL_common_procedurals(bpy.types.UIList):
+class DZOB_UL_common_procedurals(bpy.types.UIList):
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname):
         layout.label(text=item.name)
 
 
-class A3OB_PT_material(bpy.types.Panel):
+class DZOB_PT_material(bpy.types.Panel):
     bl_region_type = 'WINDOW'
     bl_space_type = 'PROPERTIES'
     bl_label = "Object Builder: Material Properties"
@@ -147,7 +147,7 @@ class A3OB_PT_material(bpy.types.Panel):
         texture_type = material_props.texture_type
         if texture_type == 'TEX':
             row_texture = layout.row(align=True)
-            row_texture.operator("a3ob.material_autosearch", text="", icon='VIEWZOOM')
+            row_texture.operator("dzob.material_autosearch", text="", icon='VIEWZOOM')
             row_texture.prop(material_props, "texture_path", text="", icon='TEXTURE')
         elif texture_type == 'COLOR':
             row_color = layout.row(align=True)
@@ -155,20 +155,20 @@ class A3OB_PT_material(bpy.types.Panel):
             row_color.prop(material_props, "color_type", text="")
         elif texture_type == 'CUSTOM':
             row_raw = layout.row(align=True)
-            row_raw.operator("a3ob.paste_common_procedural", text="", icon='PASTEDOWN')
+            row_raw.operator("dzob.paste_common_procedural", text="", icon='PASTEDOWN')
             row_raw.prop(material_props, "color_raw", text="", icon='TEXT')
         
         row_material = layout.row(align=True)
-        row_material.operator("a3ob.paste_common_material", text="", icon='PASTEDOWN')
+        row_material.operator("dzob.paste_common_material", text="", icon='PASTEDOWN')
         row_material.prop(material_props, "material_path", text="", icon='MATERIAL')
 
 
 classes = (
-    A3OB_OT_material_autosearch,
-    A3OB_OT_paste_common_material,
-    A3OB_OT_paste_common_procedural,
-    A3OB_UL_common_procedurals,
-    A3OB_PT_material,
+    DZOB_OT_material_autosearch,
+    DZOB_OT_paste_common_material,
+    DZOB_OT_paste_common_procedural,
+    DZOB_UL_common_procedurals,
+    DZOB_PT_material,
 )
 
 

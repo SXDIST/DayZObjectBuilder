@@ -27,7 +27,7 @@ class P3DTest(unittest.TestCase):
             file_in_p3d = os.path.join(folder_inputs, file)
 
             bpy.ops.wm.read_homefile(app_template="")
-            bpy.ops.a3ob.import_p3d(filepath=file_in_p3d)
+            bpy.ops.dzob.import_p3d(filepath=file_in_p3d)
     
     def test_import_export(self):
         """Import -> export the sample models, re-import -> re-export the first exported models, and compare size"""
@@ -40,11 +40,11 @@ class P3DTest(unittest.TestCase):
             file_out_p3d_2 = os.path.join(folder_outputs, name + "_out_re.p3d")
             
             bpy.ops.wm.read_homefile(app_template="")
-            bpy.ops.a3ob.import_p3d(filepath=file_in_p3d)
-            bpy.ops.a3ob.export_p3d(filepath=file_out_p3d_1)
+            bpy.ops.dzob.import_p3d(filepath=file_in_p3d)
+            bpy.ops.dzob.export_p3d(filepath=file_out_p3d_1)
             bpy.ops.wm.read_homefile(app_template="")
-            bpy.ops.a3ob.import_p3d(filepath=file_out_p3d_1)
-            bpy.ops.a3ob.export_p3d(filepath=file_out_p3d_2)
+            bpy.ops.dzob.import_p3d(filepath=file_out_p3d_1)
+            bpy.ops.dzob.export_p3d(filepath=file_out_p3d_2)
 
             size_out = os.path.getsize(file_out_p3d_1)
             size_out_re = os.path.getsize(file_out_p3d_2)

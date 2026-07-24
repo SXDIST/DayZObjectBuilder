@@ -9,18 +9,22 @@ if "props_object_mesh" in locals():
         reload(import_export_mcfg)
     if "import_export_p3d" in locals():
         reload(import_export_p3d)
-    if "import_export_rtm" in locals():
-        reload(import_export_rtm)
+    if "import_export_xob" in locals():
+        reload(import_export_xob)
+    if "import_export_anm" in locals():
+        reload(import_export_anm)
+    if "import_export_menu" in locals():
+        reload(import_export_menu)
     if "import_export_tbcsv" in locals():
         reload(import_export_tbcsv)
     if "import_export_paa" in locals():
         reload(import_export_paa)
-    if "props_action" in locals():
-        reload(props_action)
     if "props_material" in locals():
         reload(props_material)
     if "props_object_mesh" in locals():
         reload(props_object_mesh)
+    if "tool_lod_generator" in locals():
+        reload(tool_lod_generator)
     if "tool_outliner" in locals():
         reload(tool_outliner)
     if "tool_hitpoint" in locals():
@@ -37,6 +41,8 @@ if "props_object_mesh" in locals():
         reload(tool_rigging)
     if "tool_scripts" in locals():
         reload(tool_scripts)
+    if "tool_character_rig" in locals():
+        reload(tool_character_rig)
     if "tool_utilities" in locals():
         reload(tool_utilities)
     if "tool_validation" in locals():
@@ -47,12 +53,14 @@ from . import import_export_armature
 from . import import_export_asc
 from . import import_export_mcfg
 from . import import_export_p3d
-from . import import_export_rtm
+from . import import_export_xob
+from . import import_export_anm
+from . import import_export_menu
 from . import import_export_tbcsv
 from . import import_export_paa
-from . import props_action
 from . import props_material
 from . import props_object_mesh
+from . import tool_lod_generator
 from . import tool_outliner
 from . import tool_hitpoint
 from . import tool_mass
@@ -61,5 +69,6 @@ from . import tool_paths
 from . import tool_proxies
 from . import tool_rigging
 from . import tool_scripts
+from . import tool_character_rig
 from . import tool_utilities
 from . import tool_validation

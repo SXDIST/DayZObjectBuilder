@@ -117,7 +117,7 @@ jobs:
           fi
 
           instructions=$(cat <<EOF
-          Write release notes in English, in GitHub-flavored Markdown, for version ${{ steps.ver.outputs.tag }} of DZObjectBuilder — a Blender add-on for DayZ and Arma modding (import/export of P3D models and related tools).
+          Write release notes in English, in GitHub-flavored Markdown, for version ${{ steps.ver.outputs.tag }} of DZObjectBuilder — a Blender add-on for DayZ modding (import/export of P3D models and related tools).
           Base the notes ONLY on the git log below. Group changes under "### Added", "### Changed", and "### Fixed" headings; omit any heading that has no items. Write concise, user-facing bullet points — describe the effect for the user, not the raw commit wording. Merge duplicate or trivial commits.
           Respond with ONLY the release notes Markdown: no preamble, no explanation, no surrounding code fences.
           EOF
