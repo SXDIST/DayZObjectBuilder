@@ -1,8 +1,6 @@
-import os
-
 import bpy
 
-from .. import get_icon, addon_dir
+from .. import get_icon
 from ..utilities import structure as structutils
 from ..utilities import data
 
@@ -224,24 +222,6 @@ class DZOB_OT_redefine_vertex_group(bpy.types.Operator):
     def execute(self, context):
         obj = context.active_object
         structutils.redefine_vertex_group(obj, context.scene.tool_settings.vertex_group_weight)
-        return {'FINISHED'}
-
-
-class DZOB_OT_open_changelog(bpy.types.Operator):
-    """Open DayZ Object Builder add-on changelog"""
-
-    bl_label = "Open Changelog"
-    bl_idname = "dzob.open_changelog"
-
-    @classmethod
-    def poll(cls, context):
-        return True
-    
-    def execute(self, context):
-        path = os.path.join(addon_dir, "CHANGELOG.md")
-        bpy.ops.text.open(filepath=path, internal=True)
-        self.report({'INFO'}, "See CHANGELOG.md text block")
-
         return {'FINISHED'}
 
 
@@ -490,7 +470,6 @@ class DZOB_MT_help(bpy.types.Menu):
         layout.separator()
         layout.operator("wm.url_open", text="Releases", icon='URL').url = "https://github.com/SXDIST/DayZObjectBuilder/releases"
         layout.operator("wm.url_open", text="Issue Tracker", icon='URL').url = "https://github.com/SXDIST/DayZObjectBuilder/issues"
-        layout.operator("dzob.open_changelog", text="Changelog", icon='TEXT')
 
 
 classes = (
@@ -505,7 +484,6 @@ classes = (
     DZOB_OT_cleanup_vertex_groups,
     DZOB_OT_translate_vertex_groups,
     DZOB_OT_redefine_vertex_group,
-    DZOB_OT_open_changelog,
     DZOB_UL_common_data_base,
     DZOB_UL_common_data_materials,
     DZOB_UL_common_data_namedprops,

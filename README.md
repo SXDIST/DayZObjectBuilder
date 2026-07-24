@@ -62,7 +62,7 @@ That same decision is what keeps existing `.blend` files working: the model meta
 
 ## Documentation
 
-Because this fork stays close to upstream in workflow, properties and panel layout, MrClock's documentation on [GitBook](https://mrcmodding.gitbook.io/arma-3-object-builder/home) still describes most of this add-on accurately. Features specific to this fork are documented above and in [`DZObjectBuilder/CHANGELOG.md`](DZObjectBuilder/CHANGELOG.md).
+Because this fork stays close to upstream in workflow, properties and panel layout, MrClock's documentation on [GitBook](https://mrcmodding.gitbook.io/arma-3-object-builder/home) still describes most of this add-on accurately. Features specific to this fork are documented above; per-version changes are in the [release notes](https://github.com/SXDIST/DayZObjectBuilder/releases).
 
 ## Credits
 
