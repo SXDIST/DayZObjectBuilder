@@ -18,6 +18,7 @@ IMPORT_ENTRIES = (
 
 EXPORT_ENTRIES = (
     ("dzob.export_p3d",   "DayZ model (.p3d)",              'MESH_DATA'),
+    ("dzob.export_anm",   "DayZ animation (.anm)",          'ACTION'),
     ("dzob.export_mcfg",  "DayZ skeleton (model.cfg)",      'ARMATURE_DATA'),
     ("dzob.export_tbcsv", "Terrain Builder objects (.txt)", 'FILE_TEXT'),
     ("dzob.export_asc",   "Esri Grid ASCII (.asc)",         'MESH_GRID'),
