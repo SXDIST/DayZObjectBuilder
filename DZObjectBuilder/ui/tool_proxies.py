@@ -33,6 +33,7 @@ class ProxyLivePreviewSettings:
     proxy_action = 'NOTHING'
     first_lod_only = True
     translate_selections = False
+    pascalcase_selections = False
     cleanup_empty_selections = False
     sections = 'PRESERVE'
     absolute_paths = True
@@ -610,6 +611,7 @@ class DZOB_OT_proxy_extract(bpy.types.Operator):
     proxy_action: bpy.props.EnumProperty(items=(('SEPARATE', "", ""),), default='SEPARATE')
     first_lod_only: bpy.props.BoolProperty(default=True)
     translate_selections: bpy.props.BoolProperty()
+    pascalcase_selections: bpy.props.BoolProperty()
     cleanup_empty_selections: bpy.props.BoolProperty()
     sections: bpy.props.EnumProperty(items=(("PRESERVE", "", ""),), default="PRESERVE")
     absolute_paths: bpy.props.BoolProperty(default=True)

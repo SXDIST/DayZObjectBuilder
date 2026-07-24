@@ -82,6 +82,11 @@ class DZOB_OP_import_p3d(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
         name = "Translate Selections",
         description = "Try to translate czech selection names to english"
     )
+    pascalcase_selections: bpy.props.BoolProperty(
+        name = "PascalCase Selections",
+        description = "Restore the canonical casing of known DayZ bone selections (eg.: rightlegroll -> RightLegRoll)\nSelections that are not part of the DayZ skeleton are left unchanged",
+        default = True
+    )
     cleanup_empty_selections: bpy.props.BoolProperty(
         name = "Cleanup Selections",
         description = "Remove empty selections\nIMPORTANT: certain model.cfg animations may depend on even empty selections in order to display correctly"
@@ -221,6 +226,7 @@ class DZOB_PT_import_p3d_post(bpy.types.Panel):
             col = layout.column(align=True)
 
             col.prop(operator, "translate_selections")
+            col.prop(operator, "pascalcase_selections")
             col.prop(operator, "cleanup_empty_selections")
             col.separator()
             col.prop(operator, "proxy_action", expand=True)
@@ -229,6 +235,7 @@ class DZOB_PT_import_p3d_post(bpy.types.Panel):
             col = layout.column(align=True)
 
             col.prop(operator, "translate_selections")
+            col.prop(operator, "pascalcase_selections")
             col.prop(operator, "cleanup_empty_selections")
             col.separator()
             col.prop(operator, "proxy_action", expand=True)
