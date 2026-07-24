@@ -37,6 +37,8 @@ if "data" in locals():
         reload(rigging)
     if "structure" in locals():
         reload(structure)
+    if "lodgen" in locals():
+        reload(lodgen)
 
 
 # In order of dependency
@@ -58,3 +60,4 @@ from . import masses
 from . import outliner
 from . import rigging
 from . import structure
+from . import lodgen

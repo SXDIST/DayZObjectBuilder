@@ -23,6 +23,8 @@ if "props_object_mesh" in locals():
         reload(props_material)
     if "props_object_mesh" in locals():
         reload(props_object_mesh)
+    if "tool_lod_generator" in locals():
+        reload(tool_lod_generator)
     if "tool_outliner" in locals():
         reload(tool_outliner)
     if "tool_hitpoint" in locals():
@@ -58,6 +60,7 @@ from . import import_export_tbcsv
 from . import import_export_paa
 from . import props_material
 from . import props_object_mesh
+from . import tool_lod_generator
 from . import tool_outliner
 from . import tool_hitpoint
 from . import tool_mass

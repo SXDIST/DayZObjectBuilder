@@ -1,0 +1,15 @@
+# LOD type indices as used by the object LOD enum (see utilities/lod.py).
+LOD_RESOLUTION    = '0'
+LOD_VIEW_PILOT    = '2'
+LOD_GEOMETRY      = '6'
+LOD_MEMORY        = '9'
+LOD_VIEW_GEOMETRY = '14'
+LOD_FIRE_GEOMETRY = '15'
+
+COLLECTION_VISUALS      = "Visuals"
+COLLECTION_GEOMETRIES   = "Geometries"
+COLLECTION_POINT_CLOUDS = "Point Clouds"
+COLLECTION_ORDER        = [COLLECTION_VISUALS, COLLECTION_GEOMETRIES, COLLECTION_POINT_CLOUDS]
+
+PROP_LOD_NO_SHADOW = 'lodnoshadow'
+PROP_AUTOCENTER    = 'autocenter'
