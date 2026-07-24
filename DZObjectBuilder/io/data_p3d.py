@@ -748,16 +748,17 @@ class P3D_LOD():
 
         return list(groups.keys()), values
     
-    # Change every file path, and selection name to lower case for a uniform output.
+    # Change every file path, and named property to lower case for a uniform output.
+    # Selection names are deliberately left alone: DayZ rigs use PascalCase bone names
+    # (Pelvis, LeftForeArm, ...) and flattening them makes the selections unreadable in
+    # Object Builder, while the engine matches them case insensitively anyway.
     def force_lowercase(self):
         for face in self.faces:
             face[3] = face[3].lower()
             face[4] = face[4].lower()
-        
+
         for tagg in self.taggs:
-            if tagg.is_selection():
-                tagg.name = tagg.name.lower()
-            elif type(tagg.data) is P3D_TAGG_DataProperty:
+            if type(tagg.data) is P3D_TAGG_DataProperty:
                 tagg.data.key = tagg.data.key.lower()
                 tagg.data.value = tagg.data.value.lower()
 

@@ -308,8 +308,8 @@ class DZOB_OP_export_p3d(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
         description = "Renumber the \"component##\" selections to make sure they are unique (only use if necessary\neg.: geometry type LODs have sub-objects)"
     )
     force_lowercase: bpy.props.BoolProperty(
-        name = "Force Lowercase",
-        description = "Export all paths and selection names as lowercase",
+        name = "Force Lowercase Paths",
+        description = "Export all file paths and named properties as lowercase\n(selection names always keep their original casing)",
         default = True
     )
     translate_selections: bpy.props.BoolProperty(
