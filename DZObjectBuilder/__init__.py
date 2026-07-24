@@ -347,6 +347,7 @@ modules = (
     props.scene,
     ui.props_object_mesh,
     ui.props_material,
+    ui.import_export_menu,
     ui.import_export_p3d,
     ui.import_export_xob,
     ui.import_export_anm,

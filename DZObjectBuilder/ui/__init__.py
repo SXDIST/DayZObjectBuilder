@@ -13,6 +13,8 @@ if "props_object_mesh" in locals():
         reload(import_export_xob)
     if "import_export_anm" in locals():
         reload(import_export_anm)
+    if "import_export_menu" in locals():
+        reload(import_export_menu)
     if "import_export_tbcsv" in locals():
         reload(import_export_tbcsv)
     if "import_export_paa" in locals():
@@ -51,6 +53,7 @@ from . import import_export_mcfg
 from . import import_export_p3d
 from . import import_export_xob
 from . import import_export_anm
+from . import import_export_menu
 from . import import_export_tbcsv
 from . import import_export_paa
 from . import props_material

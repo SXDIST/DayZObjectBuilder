@@ -96,10 +96,6 @@ classes = (
 )
 
 
-def menu_func_import(self, context):
-    self.layout.operator(DZOB_OP_import_xob.bl_idname, text="DayZ model (.xob)")
-
-
 if bpy.app.version >= (4, 1, 0):
     class DZOB_FH_import_xob(bpy.types.FileHandler):
         bl_idname = "DZOB_FH_import_xob"
@@ -118,14 +114,10 @@ def register():
     for cls in classes:
         bpy.utils.register_class(cls)
 
-    bpy.types.TOPBAR_MT_file_import.append(menu_func_import)
-
     print("\t" + "UI: XOB Import / Export")
 
 
 def unregister():
-    bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)
-
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
 

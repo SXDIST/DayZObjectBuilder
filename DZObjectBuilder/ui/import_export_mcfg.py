@@ -162,21 +162,10 @@ if bpy.app.version >= (4, 1, 0):
     classes = (*classes, DZOB_FH_import_mcfg)
 
 
-def menu_func_import(self, context):
-    self.layout.operator(DZOB_OP_import_mcfg.bl_idname, text="DayZ skeletons (model.cfg)")
-
-
-def menu_func_export(self, context):
-    self.layout.operator(DZOB_OP_export_mcfg.bl_idname, text="DayZ skeleton (model.cfg)")
-
-
 def register():
     for cls in classes:
         bpy.utils.register_class(cls)
         
-    bpy.types.TOPBAR_MT_file_import.append(menu_func_import)
-    bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
-    
     print("\t" + "UI: MCFG Import / Export")
 
 
@@ -184,7 +173,4 @@ def unregister():
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
         
-    bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)
-    bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)
-    
     print("\t" + "UI: MCFG Import / Export")
