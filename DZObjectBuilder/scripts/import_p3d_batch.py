@@ -47,6 +47,8 @@ class Settings:
     proxy_action = 'SEPARATE'
     # Translate czech selection names to english
     translate_selections = False
+    # Restore the canonical PascalCase casing of known DayZ bone selections
+    pascalcase_selections = True
     # Cleanup selections without any vertices assigned
     cleanup_empty_selections = False
 

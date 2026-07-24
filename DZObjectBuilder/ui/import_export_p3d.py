@@ -82,6 +82,11 @@ class DZOB_OP_import_p3d(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
         name = "Translate Selections",
         description = "Try to translate czech selection names to english"
     )
+    pascalcase_selections: bpy.props.BoolProperty(
+        name = "PascalCase Selections",
+        description = "Restore the canonical casing of known DayZ bone selections (eg.: rightlegroll -> RightLegRoll)\nSelections that are not part of the DayZ skeleton are left unchanged",
+        default = True
+    )
     cleanup_empty_selections: bpy.props.BoolProperty(
         name = "Cleanup Selections",
         description = "Remove empty selections\nIMPORTANT: certain model.cfg animations may depend on even empty selections in order to display correctly"
@@ -221,6 +226,7 @@ class DZOB_PT_import_p3d_post(bpy.types.Panel):
             col = layout.column(align=True)
 
             col.prop(operator, "translate_selections")
+            col.prop(operator, "pascalcase_selections")
             col.prop(operator, "cleanup_empty_selections")
             col.separator()
             col.prop(operator, "proxy_action", expand=True)
@@ -229,6 +235,7 @@ class DZOB_PT_import_p3d_post(bpy.types.Panel):
             col = layout.column(align=True)
 
             col.prop(operator, "translate_selections")
+            col.prop(operator, "pascalcase_selections")
             col.prop(operator, "cleanup_empty_selections")
             col.separator()
             col.prop(operator, "proxy_action", expand=True)
@@ -308,8 +315,8 @@ class DZOB_OP_export_p3d(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
         description = "Renumber the \"component##\" selections to make sure they are unique (only use if necessary\neg.: geometry type LODs have sub-objects)"
     )
     force_lowercase: bpy.props.BoolProperty(
-        name = "Force Lowercase",
-        description = "Export all paths and selection names as lowercase",
+        name = "Force Lowercase Paths",
+        description = "Export all file paths and named properties as lowercase\n(selection names always keep their original casing)",
         default = True
     )
     translate_selections: bpy.props.BoolProperty(

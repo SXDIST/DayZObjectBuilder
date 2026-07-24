@@ -20,6 +20,7 @@ from ..utilities import proxy as proxyutils
 from ..utilities import flags as flagutils
 from ..utilities import structure as structutils
 from ..utilities import data
+from ..utilities import dayz_naming
 from ..utilities.logger import ProcessLogger
 
 
@@ -294,6 +295,13 @@ def translate_selections(obj):
         group.name = data.translations_czech_english.get(group.name.lower(), group.name)
 
 
+# Models are commonly stored with all-lowercase selection names, which makes the DayZ
+# bone selections hard to read and to match against a PascalCase armature. Known
+# skeleton names are restored to their canonical casing, everything else is left alone.
+def pascalcase_selections(obj):
+    return structutils.rename_vertex_groups(obj, dayz_naming.to_pascal_case)
+
+
 def process_lod(operator, logger, lod, materials, materials_lookup, categories, lod_links):
     lod_index = lod_links[0]
     lod_resolution = lod_links[1]
@@ -397,7 +405,11 @@ def process_lod(operator, logger, lod, materials, materials_lookup, categories, 
     if operator.translate_selections:
         translate_selections(obj)
         logger.step("Translated selections to english")
-    
+
+    if operator.pascalcase_selections:
+        renamed = pascalcase_selections(obj)
+        logger.step("Restored PascalCase casing of %d selection(s)" % renamed)
+
     if operator.cleanup_empty_selections:
         structutils.cleanup_vertex_groups(obj)
         logger.step("Cleaned up vertex groups")

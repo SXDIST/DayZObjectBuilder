@@ -135,6 +135,39 @@ def cleanup_vertex_groups(obj):
     return removed
 
 
+# Rename every vertex group of the object through the given name converter.
+# Blender silently appends a ".001" style suffix when a rename would collide with an
+# existing group, so the renames are done in two passes over unique placeholder names.
+# That way case flips (eg.: "RightLeg" -> "rightleg" while "rightleg" is still taken by
+# another group) resolve without the suffixes leaking into the final names.
+def rename_vertex_groups(obj, converter):
+    plan = []
+    for group in obj.vertex_groups:
+        name_new = converter(group.name)
+        if name_new != group.name:
+            plan.append((group, name_new))
+
+    if not plan:
+        return 0
+
+    prefix = "__dzob_tmp_%d_" % id(obj)
+    for i, (group, _) in enumerate(plan):
+        group.name = "%s%d" % (prefix, i)
+
+    taken = {group.name for group in obj.vertex_groups if not group.name.startswith(prefix)}
+    for group, name_new in plan:
+        name_final = name_new
+        suffix = 1
+        while name_final in taken:
+            suffix += 1
+            name_final = "%s_%d" % (name_new, suffix)
+
+        group.name = name_final
+        taken.add(name_final)
+
+    return len(plan)
+
+
 def redefine_vertex_group(obj, weight):
     obj.update_from_editmode()
     
