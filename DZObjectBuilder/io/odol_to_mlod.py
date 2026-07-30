@@ -4,37 +4,53 @@
 # imported by exactly the same code path as an editable .p3d.
 #
 # The four geometry transforms below carry all the risk. Each was settled by
-# measurement against the DayZ v54 corpus (55galDrum.p3d), NOT by copying the
-# pre-measurement conversion sketch in the task brief, which is wrong on three of
-# the four. What matters is that the values stored here are already correct for the
-# downstream consumer; the objects bypass P3D_LOD.read entirely, so whatever byte
-# level flips that reader performs on MLOD input are irrelevant here.
+# measurement against the DayZ v54 corpus (55galDrum.p3d). An earlier pass concluded
+# vertices needed no axis swap and winding needed no reversal; both were wrong,
+# because the "no swap" measurement (vertex cloud fills bbox_min..bbox_max) only
+# checks the ODOL file's internal self-consistency - bbox and vertices come from the
+# same raw frame, so that check passes trivially regardless of what "up" means in
+# that frame, and can never distinguish "no swap needed" from "swap needed". The
+# corrected measurement below instead checks the raw frame against real-world
+# geometry directly.
 #
-#   Vertices  ODOL v54 stores them in absolute model coordinates. Measured: the
-#             vertex cloud fills bbox_min..bbox_max exactly while bbox_center is not
-#             the origin (drum LOD 0: centre (-0.059, 0.418, 0.0)). Adding the
-#             centre, as the brief sketch does, would shift every vertex off the box.
-#             So no centre offset is applied. The frame is Y-up, the same as the
-#             in-memory MLOD vertex, so no axis swap either.
+#   Vertices  ODOL v54 stores them in absolute model coordinates (no centre offset:
+#             the vertex cloud fills bbox_min..bbox_max exactly while bbox_center is
+#             not the origin, e.g. drum LOD 0 centre (-0.059, 0.418, 0.0); adding the
+#             centre would shift every vertex off the box). The raw frame is BI's
+#             native Y-up - NOT already the in-memory MLOD (Blender Z-up) frame.
+#             Measured on 55galDrum.p3d LOD 0: raw Y extent is 0.836 (a real
+#             55-gallon drum's height) while raw X/Z extents are ~0.6-0.73 (its
+#             diameter), and bbox_min.y is 0.0, i.e. the drum stands base-up from
+#             Y = 0 in the raw frame - textbook Y-up. So the same axis swap
+#             P3D_LOD.read_vert applies when reading MLOD off disk (swap Y and Z) is
+#             required here too, to land in Blender's Z-up frame.
 #
-#   Normals   Stored unchanged, NOT negated. Measured (Task 5, reconfirmed here): the
-#             decoded ODOL normal already points outward on the drum's cylindrical
-#             wall (834 outward vs 242 inward, the drum also modelling its inner
-#             surface). That is the same outward orientation P3D_LOD.read yields, so
-#             negating here - as the brief sketch does - would invert shading.
+#   Normals   Axis-swapped the same way as vertices, NOT negated. Measured: the
+#             decoded ODOL normal, swapped and dotted against the wall's outward
+#             radial direction, points outward as often after the swap as before it
+#             (1150 outward vs 292 inward either way, 55galDrum.p3d LOD 0 wall
+#             faces) - a stored vector's alignment with a consistently-swapped
+#             reference direction is unaffected by relabelling both the same way.
+#             That already matches the outward orientation P3D_LOD.read yields, so
+#             negating here would invert shading.
 #
-#   Winding   Kept as stored, NOT reversed. Measured: the stored winding's cross
-#             product points outward on the wall (859 vs 217) and agrees with the
-#             stored per-vertex normal on every one of the 1076 wall faces (0 agree
-#             when reversed). Since the normals are not sign-flipped, the stored
-#             winding already produces an outward face; reversing it would invert
-#             every polygon.
+#   Winding   Reversed. Measured: with vertices left unswapped, the stored winding's
+#             cross product points outward on the wall 1169/1442 times, agreeing
+#             with the (also unswapped) stored normal. Swapping the vertex axes to
+#             the corrected frame is an orientation-reversing transform (a
+#             transposition, determinant -1) that flips every cross product's sign
+#             without touching the stored normal vectors' alignment - so in the
+#             corrected frame the same stored winding order now points outward only
+#             273/1442 times. Reversing the per-face index order restores outward
+#             winding in the corrected frame.
 #
 #   UVs       Stored as (u, 1 - v). read_uv_set in data_p3d_odol.py decodes the raw
 #             ODOL v (top-left origin, the BI on-disk convention) without flipping,
 #             and the add-on's in-memory convention is bottom-left, exactly as
 #             P3D_LOD.read stores (u, 1 - v) for MLOD input. So a single flip is
 #             applied here; it is not double-applied, because the reader applied none.
+#             UVs are per-vertex data, unaffected by the position axis swap or the
+#             winding reversal beyond following the same reversed index order.
 
 
 from . import data_p3d as p3d
@@ -67,9 +83,11 @@ def face_materials(lod):
 
 
 def convert_face(lod, face_index, indices, textures, materials):
-    # Winding kept as stored (see module header). ODOL holds one normal and one UV
-    # per vertex, both arrays parallel to the vertex array, so a face corner's normal
-    # index and UV both come straight from its vertex index.
+    # Winding reversed (see module header). ODOL holds one normal and one UV per
+    # vertex, both arrays parallel to the vertex array, so a face corner's normal
+    # index and UV both come straight from its vertex index; reversing the shared
+    # index order up front keeps all three in sync.
+    indices = list(reversed(indices))
     vertices = list(indices)
     normals = list(indices)
 
@@ -119,9 +137,11 @@ def convert_lod(lod):
     output = p3d.P3D_LOD()
     output.resolution = p3d.P3D_LOD_Resolution.from_float(lod.resolution)
 
-    # Vertices absolute, no centre offset; normals unchanged, not negated.
-    output.verts = [(x, y, z, 0) for x, y, z in lod.vertices]
-    output.normals = [(x, y, z) for x, y, z in lod.normals]
+    # Vertices absolute, no centre offset; axis swapped (Y/Z) to land in Blender's
+    # Z-up frame, matching P3D_LOD.read_vert's swap of the on-disk MLOD frame.
+    # Normals get the same axis swap, not negated (see module header).
+    output.verts = [(x, z, y, 0) for x, y, z in lod.vertices]
+    output.normals = [(x, z, y) for x, y, z in lod.normals]
 
     textures, materials = face_materials(lod)
     output.faces = [convert_face(lod, index, indices, textures, materials)

@@ -551,8 +551,12 @@ class TestConversion(unittest.TestCase):
 
     def test_stored_winding_and_normals_both_point_outward(self):
         # The highest-risk decision in the task, pinned rather than left to prose.
-        # The brief says to negate the normals AND reverse the winding; measurement
-        # says do neither. On the drum's cylindrical wall the outward direction is
+        # Vertices and normals are axis-swapped (raw ODOL is BI's native Y-up, same
+        # as the on-disk MLOD frame; see the odol_to_mlod module header), so in the
+        # CONVERTED, Blender-frame output the drum stands tall along Z, with its
+        # circular cross-section in the X-Y plane - not Y-up as the raw file was.
+        # Winding is reversed to compensate for that swap being orientation-
+        # reversing. On the drum's cylindrical wall the outward direction is
         # unambiguous, so this checks that the CONVERTED face - both its stored
         # per-vertex normal and the normal implied by its stored winding order -
         # faces away from the drum axis. If either had been flipped this fails.
@@ -563,7 +567,7 @@ class TestConversion(unittest.TestCase):
         ys = [v[1] for v in lod.verts]
         zs = [v[2] for v in lod.verts]
         centre_x = (min(xs) + max(xs)) / 2
-        centre_z = (min(zs) + max(zs)) / 2
+        centre_y = (min(ys) + max(ys)) / 2
 
         def cross(a, b):
             return (a[1] * b[2] - a[2] * b[1],
@@ -577,18 +581,18 @@ class TestConversion(unittest.TestCase):
             mid_x = sum(c[0] for c in corners) / len(corners)
             mid_y = sum(c[1] for c in corners) / len(corners)
             mid_z = sum(c[2] for c in corners) / len(corners)
-            radius_x, radius_z = mid_x - centre_x, mid_z - centre_z
-            radius = (radius_x ** 2 + radius_z ** 2) ** 0.5
+            radius_x, radius_y = mid_x - centre_x, mid_y - centre_y
+            radius = (radius_x ** 2 + radius_y ** 2) ** 0.5
 
             # Only faces clearly on the side wall, away from the lid and the base.
-            if radius < 0.25 or not 0.15 < mid_y < 0.7:
+            if radius < 0.25 or not 0.15 < mid_z < 0.7:
                 continue
 
-            outward = (radius_x, 0.0, radius_z)
+            outward = (radius_x, radius_y, 0.0)
 
             stored = [lod.normals[i] for i in face[1]]
             navg = (sum(n[0] for n in stored), sum(n[1] for n in stored), sum(n[2] for n in stored))
-            if navg[0] * outward[0] + navg[2] * outward[2] > 0:
+            if navg[0] * outward[0] + navg[1] * outward[1] > 0:
                 normal_out += 1
             else:
                 normal_in += 1
@@ -596,7 +600,7 @@ class TestConversion(unittest.TestCase):
             v0, v1, v2 = corners[0], corners[1], corners[2]
             wn = cross((v1[0] - v0[0], v1[1] - v0[1], v1[2] - v0[2]),
                        (v2[0] - v0[0], v2[1] - v0[1], v2[2] - v0[2]))
-            if wn[0] * outward[0] + wn[2] * outward[2] > 0:
+            if wn[0] * outward[0] + wn[1] * outward[1] > 0:
                 winding_out += 1
             else:
                 winding_in += 1
