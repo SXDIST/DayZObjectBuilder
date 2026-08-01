@@ -146,10 +146,14 @@ class P3D_TAGG_DataSelection():
     def encode_weight(cls, weight):
         if weight in (0, 1):
             return int(weight)
-            
+
         value = round(255 - 254 * weight)
-            
-        return value
+
+        # Both ends of the byte range are reserved: 0 means the vertex is not part of
+        # the selection at all, and 255 decodes back to a weight of 0. Rounding into
+        # either would turn a vertex that carries a weight into a weightless one, so
+        # the value is clamped to the smallest and largest representable weights.
+        return min(max(value, 1), 254)
     
     @classmethod
     def read(cls, file, count_verts, count_faces):
