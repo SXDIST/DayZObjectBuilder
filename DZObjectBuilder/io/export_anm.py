@@ -14,6 +14,46 @@ from ..utilities.logger import ProcessLogger
 _MTX_FIX_INV = MTX_FIX.inverted()
 
 
+def _keyed_bone_names(arm):
+    # Bone names the active action actually keys. DayZ clips are routinely
+    # partial: a masked/layered clip such as a sickness overlay animates only
+    # the torso and one arm, and the engine takes every bone it omits from the
+    # layer underneath. Writing the full armature into such a clip pins bones
+    # the layer was never meant to touch (legs at rest pose, hand bones the
+    # item's IK profile owns), which shows up in game as a collapsed pose or a
+    # grip that will not close. Returns None when nothing usable is keyed so
+    # the caller can fall back to the whole armature.
+    ad = arm.animation_data
+    if ad is None or ad.action is None:
+        return None
+
+    action = ad.action
+
+    fcurves = []
+    layers = getattr(action, "layers", None)
+    if layers:
+        # Blender 4.4+ slotted actions keep fcurves inside per-slot channelbags
+        for layer in layers:
+            for strip in layer.strips:
+                for slot in action.slots:
+                    bag = strip.channelbag(slot)
+                    if bag is not None:
+                        fcurves.extend(bag.fcurves)
+    else:
+        fcurves = list(action.fcurves)
+
+    names = set()
+    for fc in fcurves:
+        path = fc.data_path
+        if not path.startswith('pose.bones['):
+            continue
+        parts = path.split('"')
+        if len(parts) > 1:
+            names.add(parts[1])
+
+    return names or None
+
+
 def _stored_quat(mat):
     # DayZ-space rotation matrix -> stored (x, z, y, -w); inverse of the
     # import swizzle Quaternion((-w, x, z, y)).
@@ -62,6 +102,11 @@ def export_file(operator, context):
         f0, f1 = f1, f0
 
     pbones = list(arm.pose.bones)
+    if getattr(operator, "bone_scope", 'ALL') == 'KEYED':
+        keyed = _keyed_bone_names(arm)
+        if keyed:
+            pbones = [pb for pb in pbones if pb.name in keyed]
+
     bones = {pb.name: data_anm.ANM_Bone(pb.name) for pb in pbones}
 
     saved = scene.frame_current

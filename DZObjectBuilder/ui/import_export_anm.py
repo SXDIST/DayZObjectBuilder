@@ -120,6 +120,15 @@ class DZOB_OP_export_anm(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
         ),
         default = 'V6'
     )
+    bone_scope: bpy.props.EnumProperty(
+        name = "Bones",
+        description = "Which bones to write into the clip",
+        items = (
+            ('KEYED', "Keyed Only", "Only bones the action keys - keeps a partial/masked clip partial, so the engine still takes untouched bones from the layer below"),
+            ('ALL', "Whole Armature", "Every bone in the armature, even ones the action never touches"),
+        ),
+        default = 'KEYED'
+    )
     use_scene_range: bpy.props.BoolProperty(
         name = "Scene Frame Range",
         description = "Use the scene start/end frames instead of the values below",
@@ -187,6 +196,7 @@ class DZOB_PT_export_anm_main(bpy.types.Panel):
         operator = context.space_data.active_operator
 
         layout.prop(operator, "version")
+        layout.prop(operator, "bone_scope")
         layout.prop(operator, "use_scene_range")
         col = layout.column(align=True)
         col.enabled = not operator.use_scene_range
