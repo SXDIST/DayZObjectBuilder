@@ -33,6 +33,17 @@ class DZOB_OP_import_anm(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
         name = "Translation Keys",
         default = True
     )
+    gear_ik_filepath: bpy.props.StringProperty(
+        name = "Gear IK",
+        description = ("Optional item grip clip to lay over the imported one, "
+                       "e.g. P:/dz/anims/anm/player/ik/gear/<item>.anm. In game the "
+                       "held item's hand comes from that separate file, not from "
+                       "the locomotion clip - paste its path and the viewport shows "
+                       "the same pose the engine draws instead of an open grip hand. "
+                       "Plain text on purpose: a FILE_PATH field would try to open a "
+                       "second file browser on top of this one, which Blender refuses"),
+        default = ""
+    )
 
     @classmethod
     def poll(cls, context):
@@ -85,6 +96,7 @@ class DZOB_PT_import_anm_main(bpy.types.Panel):
         layout.prop(operator, "scale")
         layout.prop(operator, "import_rotation")
         layout.prop(operator, "import_translation")
+        layout.prop(operator, "gear_ik_filepath")
 
 
 class DZOB_OP_export_anm(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
