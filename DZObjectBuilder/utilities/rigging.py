@@ -44,9 +44,18 @@ def normalize_weights(obj, bone_indices):
                 
                 weights += vert[deform][key]
                 
+            # A vertex whose bone weights are all zero has nothing to normalize against,
+            # and dividing by their sum would throw. Such weights are leftovers of the
+            # byte quantization of the P3D selections, and are dropped instead.
+            if weights == 0:
+                for key in [key for key in vert[deform].keys() if key in bone_indices]:
+                    del vert[deform][key]
+
+                continue
+
             if abs(weights-1) > 0.01:
                 normalized += 1
-            
+
             for key in vert[deform].keys():
                 if key not in bone_indices:
                     continue
