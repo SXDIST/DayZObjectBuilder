@@ -15,11 +15,19 @@ def run_component_search(context, obj):
         print("WARNING: find_components failed: %s" % ex)
 
 
-def get_local_bounds(context, obj):
-    # Bounds have to be measured in the object's own space. Transforming the corners of
-    # the local bounding box to world space gives the AABB of a rotated AABB, which is
-    # inflated on every axis the object is rotated around, and the box that comes out of
-    # it is aligned to the world instead of to the model.
+def get_world_bounds(context, obj):
+    # Bounds are measured over the evaluated vertices in world space, which is the frame
+    # the model is actually seen and exported in - the export applies the object
+    # transforms, so the axes the engine ends up with are these.
+    #
+    # Neither shortcut works here. Transforming the 8 corners of `bound_box` gives the
+    # AABB of an AABB, inflated on every axis the object is rotated around. Measuring in
+    # the object's own space instead trades that for the same fault one level down: a
+    # mesh that sits diagonally inside its own local space (which is the normal state of
+    # an imported .p3d, where the object transform is what stands the model upright)
+    # gets a local AABB spanning the diagonal. A dagger 0.05 x 0.05 x 0.28 in the world
+    # measured 7.0 x 28.8 x 24.6 locally, and the box built from it was five times too
+    # wide.
     depsgraph = context.evaluated_depsgraph_get()
     eval_obj = obj.evaluated_get(depsgraph)
 
@@ -32,13 +40,12 @@ def get_local_bounds(context, obj):
         eval_obj.to_mesh_clear()
         return None
 
-    coords = [0.0] * (len(mesh.vertices) * 3)
-    mesh.vertices.foreach_get("co", coords)
+    matrix = eval_obj.matrix_world
+    coords = [matrix @ vert.co for vert in mesh.vertices]
     eval_obj.to_mesh_clear()
 
-    x_coords, y_coords, z_coords = coords[0::3], coords[1::3], coords[2::3]
-    min_corner = Vector((min(x_coords), min(y_coords), min(z_coords)))
-    max_corner = Vector((max(x_coords), max(y_coords), max(z_coords)))
+    min_corner = Vector((min(c.x for c in coords), min(c.y for c in coords), min(c.z for c in coords)))
+    max_corner = Vector((max(c.x for c in coords), max(c.y for c in coords), max(c.z for c in coords)))
 
     return min_corner, max_corner
 
@@ -59,7 +66,7 @@ def create_bounding_box(context, source_obj, target_obj=None):
     if not source_obj or not source_obj.data:
         return None
 
-    bounds = get_local_bounds(context, source_obj)
+    bounds = get_world_bounds(context, source_obj)
     if bounds is None:
         return None
 
@@ -72,15 +79,22 @@ def create_bounding_box(context, source_obj, target_obj=None):
         target_obj = bpy.data.objects.new("BoundingBox", bpy.data.meshes.new("BoundingBox"))
         context.scene.collection.objects.link(target_obj)
 
-    # Bake the extents into the mesh rather than into the object scale, so the LOD holds
-    # its real dimensions whether or not the transforms get applied on export.
+    copy_object_transform(source_obj, target_obj)
+
+    # The box is world aligned and tight around the model, but it is written into the
+    # LOD's own space so the LOD still sits in the frame of its source. Copying the
+    # transform makes the target's world matrix the source's, so that is what the world
+    # space corners are brought back through. The extents go into the mesh rather than
+    # into the object scale, so the LOD holds its real dimensions whether or not the
+    # transforms get applied on export.
+    to_local = source_obj.matrix_world.inverted_safe()
+
     bm = bmesh.new()
-    bmesh.ops.create_cube(bm, size=1.0, matrix=Matrix.Translation(center) @ Matrix.Diagonal(size).to_4x4())
+    bmesh.ops.create_cube(bm, size=1.0,
+                          matrix=to_local @ Matrix.Translation(center) @ Matrix.Diagonal(size).to_4x4())
     bm.to_mesh(target_obj.data)
     bm.free()
     target_obj.data.update()
-
-    copy_object_transform(source_obj, target_obj)
 
     return target_obj
 
