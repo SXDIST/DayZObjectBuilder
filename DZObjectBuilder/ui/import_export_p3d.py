@@ -328,6 +328,11 @@ class DZOB_OP_export_p3d(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
         description = "Generate Component## selections if none are already defined",
         default = True
     )
+    normalize_weights: bpy.props.BoolProperty(
+        name = "Normalize Weights",
+        description = "Clean up the skin weights of the bone selections during export:\nkeep the 4 strongest bones per vertex, and make their weights add up to 1\n(Blender normalizes on the fly while deforming, the engine does not, so unnormalized\nweights look correct in the viewport but break in game)\nOnly affects the exported data, the objects in the scene are left untouched",
+        default = True
+    )
 
     def draw(self, context):
         pass
@@ -439,6 +444,7 @@ class DZOB_PT_export_p3d_meshes(bpy.types.Panel):
         col.prop(operator, "preserve_normals")
         col.prop(operator, "sort_sections")
         col.prop(operator, "generate_components")
+        col.prop(operator, "normalize_weights")
 
 
 class DZOB_PT_export_p3d_validate(bpy.types.Panel):
