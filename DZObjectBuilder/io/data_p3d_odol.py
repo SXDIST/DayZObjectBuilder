@@ -4,9 +4,13 @@
 # This module only reads; ODOL is never written. Parsed data is converted into the
 # MLOD model by odol_to_mlod.py, so the rest of the add-on sees one representation.
 #
-# Layout follows the publicly documented ODOL structure. DayZ ships version 54,
-# which differs from Arma 3 in ModelInfo field set, material version and an
-# inconsistent hasAnims byte; those differences are handled explicitly below.
+# Layout follows the publicly documented ODOL structure. DayZ ships two versions: the
+# game's own files are version 54, while the DayZ Tools binarizer writes 53, which is
+# what almost every mod on disk actually contains (3279 against 70 over a 3356 model
+# survey of an installed mod set). Both differ from Arma 3 in ModelInfo field set,
+# material version and an inconsistent hasAnims byte; those differences are handled
+# explicitly below. The two differ from each other in only two places, the material
+# layout and a tolerated tail on the last LOD, both documented where they are handled.
 #
 # The ModelInfo layout below was derived by measurement against DayZ v54 models,
 # because the published documentation covers the Arma 3 field set only. Rather
@@ -28,7 +32,15 @@ class ODOL_Error(Exception):
 
 
 SIGNATURE = b"ODOL"
-VERSION = 54
+SUPPORTED_VERSIONS = (53, 54)
+
+# The LOD stored last in the file may declare an end address this far past both the end
+# of the file and the end of its own rest data. Measured over 657 v53 models: 198 of them
+# do it, always on the LOD with the highest start address, and always by exactly 16 bytes.
+# Nothing the importer reads lives in that range, so it is tolerated rather than treated
+# as a truncated file. Every other LOD is still held to the exact bounds, which is what
+# keeps the rest data checksum a checksum.
+TRAILING_SLACK = 16
 
 # Animation types that carry no bone axis data in the anims-to-bones mapping.
 ANIM_HIDE = 9
@@ -289,12 +301,17 @@ def read_table_at(file, position, count_lods, file_size, offset):
     flags = binary.read_bytes(file, count_lods)
     table_end = file.tell()
 
+    # Only the LOD stored last may overrun, so the slack is granted to that one address
+    # rather than to the file as a whole.
+    last = starts.index(max(starts))
+
     for i in range(count_lods):
         if not table_end <= starts[i] <= file_size:
             raise ODOL_Error("LOD %d start address %d outside [%d, %d]" % (i, starts[i], table_end, file_size))
 
-        if not starts[i] <= ends[i] <= file_size:
-            raise ODOL_Error("LOD %d end address %d not in [%d, %d]" % (i, ends[i], starts[i], file_size))
+        limit = file_size + TRAILING_SLACK if i == last else file_size
+        if not starts[i] <= ends[i] <= limit:
+            raise ODOL_Error("LOD %d end address %d not in [%d, %d]" % (i, ends[i], starts[i], limit))
 
     for i, flag in enumerate(flags):
         if flag not in (0, 1):
@@ -354,35 +371,119 @@ def read_lod_table(file, model, count_lods, file_size):
 # An EmbeddedMaterial, read inline in the LOD stream. Only the name is kept; the
 # rest exists to be walked past, and walking past it correctly is the whole problem.
 #
-# DayZ writes material version 20, which inserts two fields the Arma 3 layout does
-# not have: 25 floats of extended PBR data after pixel_shader, and one uint32 after
-# fog_mode. That is 104 bytes. Materials are read inline, so getting the width wrong
-# does not fail here, it silently shifts every following field in the LOD.
-#
 #   name              asciiz       version           uint32
 #   emissive .. specular_copy      float[4] x 6
-#   specular_power    float        pixel_shader      uint32
-#   dayz_extended     float[25]  <-- v >= 20 only
-#   vertex_shader, main_light, fog_mode              uint32 x 3
-#   dayz_unknown      uint32     <-- v >= 20 only
-#   surface_file      asciiz       render flags      uint32 x 2
-#   count_stages      uint32       count_tex_gens    uint32
+#   specular_power    float
+#   extended          float[width]               <-- width set by the material version
+#   pixel_shader, vertex_shader, main_light, fog_mode        uint32 x 4
+#   surface_file      asciiz       render flags   uint32 x 2
+#   count_stages      uint32       count_tex_gens uint32
 #   stage textures    StageTexture[count_stages]
 #   stage transforms  (uint32 uv_source + float[12]) x count_tex_gens
 #   stage TI          StageTexture               <-- v >= 10 only
-MATERIAL_VERSION_DAYZ = 20
+#
+# The extended block is the only variable part, and its width follows no rule worth
+# extrapolating: measured 10 floats at material version 15, 14 at 16 and 26 at 20
+# (ODOL v53 writes 15 and 16, v54 writes 20). Guessing it is the expensive kind of
+# wrong, because a material is read inline: a bad width does not fail where it happens,
+# it silently shifts every following field in the LOD.
+#
+# So the width is recovered from the file rather than tabulated. Everything after the
+# block is heavily constrained -- four small enumerated ids, a path or nothing, two
+# bounded counts, then self-describing stage records -- so trying every width and
+# keeping the one that validates decides it, and a material version this module has
+# never seen costs nothing. Measured over 9310 materials drawn from both ODOL versions,
+# exactly one width ever survives. The id bounds are what makes that true: dropped, a
+# third of the same materials admit up to ten widths each.
+MAX_EXTENDED_FLOATS = 48
+
+# Set well clear of the corpus, whose highest values are pixel shader 129, vertex
+# shader 35, main light 3 and fog mode 1.
+MAX_PIXEL_SHADER = 200
+MAX_VERTEX_SHADER = 200
+MAX_MAIN_LIGHT = 8
+MAX_FOG_MODE = 4
+MAX_STAGE_FILTER = 16
+MAX_STAGE_ID = 64
+MAX_MATERIAL_STAGES = 64
+
+# binary.read_asciiz walks a byte at a time until it finds a terminator or the file
+# ends, so on a wrong width it would scan the rest of the model instead of failing.
+# The candidate walk needs a bounded reader, and one that rejects what a path can
+# never be, since that rejection is half of what makes the search decisive.
+MAX_MATERIAL_STRING = 512
+
+# Printable ASCII, and tab. The tab is not a courtesy: procedural texture strings carry
+# a trailing one, as in "#(argb,8,8,3)color(1,1,1,1,co)\t". Rejecting it costs whole
+# LODs, 59 of them over a 1018 model sweep of the game files.
+MATERIAL_STRING_BYTES = frozenset([9]) | frozenset(range(32, 127))
+
+
+def read_material_asciiz(file):
+    position = file.tell()
+    raw = file.read(MAX_MATERIAL_STRING)
+    end = raw.find(b"\x00")
+    if end < 0:
+        raise ODOL_Error("Material string is not terminated within %d bytes" % MAX_MATERIAL_STRING)
+
+    if any(byte not in MATERIAL_STRING_BYTES for byte in raw[:end]):
+        raise ODOL_Error("Material string is not printable ASCII: %r" % raw[:end])
+
+    file.seek(position + end + 1)
+
+    return raw[:end]
 
 
 def read_stage_texture(file):
-    binary.read_ulong(file)         # filter
-    texture = binary.read_asciiz(file)
-    binary.read_ulong(file)         # stage id
-    file.seek(1, 1)                 # use world environment map
+    if binary.read_ulong(file) > MAX_STAGE_FILTER:
+        raise ODOL_Error("Stage texture filter is out of range")
+
+    texture = read_material_asciiz(file)
+
+    if binary.read_ulong(file) > MAX_STAGE_ID:
+        raise ODOL_Error("Stage texture id is out of range")
+
+    if binary.read_byte(file) > 1:
+        raise ODOL_Error("Stage texture world environment flag is not a boolean")
 
     return texture
 
 
-def read_material(file):
+# Everything after the extended block, walked and validated. Returns the position the
+# material ends at, so an accepted candidate does not have to be replayed.
+def read_material_tail(file, version, file_size):
+    pixel, vertex, light, fog = binary.read_ulongs(file, 4)
+    if pixel > MAX_PIXEL_SHADER or vertex > MAX_VERTEX_SHADER or light > MAX_MAIN_LIGHT or fog > MAX_FOG_MODE:
+        raise ODOL_Error("Material ids out of range: pixel %d, vertex %d, light %d, fog %d"
+                         % (pixel, vertex, light, fog))
+
+    # No surface file is normal; one that is present is always a path.
+    surface = read_material_asciiz(file)
+    if surface and not (b"." in surface and b"\\" in surface):
+        raise ODOL_Error("Material surface file is not a path: %r" % surface)
+
+    file.seek(4 * 2, 1)             # render flag count and flags
+
+    count_stages, count_tex_gens = binary.read_ulongs(file, 2)
+    if count_stages > MAX_MATERIAL_STAGES or count_tex_gens > MAX_MATERIAL_STAGES:
+        raise ODOL_Error("Implausible material stage counts: %d stages, %d tex gens" % (count_stages, count_tex_gens))
+
+    for _ in range(count_stages):
+        read_stage_texture(file)
+
+    file.seek(count_tex_gens * (4 + 4 * 12), 1)     # uv source and transform matrix
+
+    if version >= 10:
+        read_stage_texture(file)                    # stage TI
+
+    position = file.tell()
+    if position > file_size:
+        raise ODOL_Error("Material runs past the end of the file")
+
+    return position
+
+
+def read_material(file, file_size):
     name = binary.read_asciiz(file)
     version = binary.read_ulong(file)
 
@@ -394,33 +495,25 @@ def read_material(file):
 
     file.seek(4 * 4 * 6, 1)         # emissive .. specular_copy
     file.seek(4, 1)                 # specular_power
-    file.seek(4, 1)                 # pixel_shader
 
-    if version >= MATERIAL_VERSION_DAYZ:
-        file.seek(4 * 25, 1)        # DayZ extended PBR block
+    base = file.tell()
+    accepted = []
+    for width in range(MAX_EXTENDED_FLOATS + 1):
+        file.seek(base + 4 * width)
+        try:
+            accepted.append(read_material_tail(file, version, file_size))
+        except (ODOL_Error, EOFError, ValueError, struct.error):
+            continue
 
-    file.seek(4 * 3, 1)             # vertex_shader, main_light, fog_mode
+    if not accepted:
+        raise ODOL_Error("No layout fits material %r (version %d), so the stream is desynchronised"
+                         % (name, version))
 
-    if version >= MATERIAL_VERSION_DAYZ:
-        file.seek(4, 1)             # DayZ only
+    if len(accepted) > 1:
+        raise ODOL_Error("Material %r (version %d) fits %d layouts, so the stream is desynchronised"
+                         % (name, version, len(accepted)))
 
-    binary.read_asciiz(file)        # surface file
-    file.seek(4 * 2, 1)             # render flag count and flags
-
-    count_stages = binary.read_ulong(file)
-    count_tex_gens = binary.read_ulong(file)
-    if count_stages > 64 or count_tex_gens > 64:
-        raise ODOL_Error("Implausible material stage counts: %d stages, %d tex gens" % (count_stages, count_tex_gens))
-
-    for _ in range(count_stages):
-        read_stage_texture(file)
-
-    for _ in range(count_tex_gens):
-        binary.read_ulong(file)     # uv source
-        file.seek(4 * 12, 1)        # transform matrix
-
-    if version >= 10:
-        read_stage_texture(file)    # stage TI
+    file.seek(accepted[0])
 
     return name
 
@@ -601,7 +694,7 @@ class ODOL_LOD():
         self.resolution = 0.0
 
     @classmethod
-    def read(cls, file, version, end, file_size, bones = ()):
+    def read(cls, file, version, end, file_size, bones = (), slack = 0):
         output = cls()
 
         count_proxies = read_count(file, file_size, "proxy")
@@ -637,7 +730,7 @@ class ODOL_LOD():
         output.textures = [binary.read_asciiz(file) for _ in range(count_textures)]
 
         count_materials = read_count(file, file_size, "material")
-        output.materials = [read_material(file) for _ in range(count_materials)]
+        output.materials = [read_material(file, file_size) for _ in range(count_materials)]
 
         # Point/vertex cross references, not needed by the importer.
         read_compressed_array(file, 4, read_count(file, file_size, "point to vertex"))
@@ -720,9 +813,9 @@ class ODOL_LOD():
         # The checksum described above.
         position = file.tell()
         size_rest = binary.read_ulong(file)
-        if position + size_rest != end:
-            raise ODOL_Error("Rest data at %d is %d bytes, which ends at %d, not at the LOD end %d"
-                             % (position, size_rest, position + size_rest, end))
+        if not end - slack <= position + size_rest <= end:
+            raise ODOL_Error("Rest data at %d is %d bytes, which ends at %d, not in [%d, %d] before the LOD end"
+                             % (position, size_rest, position + size_rest, end - slack, end))
 
         read_condensed_array(file, 4, file_size)        # clip flags
 
@@ -815,8 +908,9 @@ class ODOL_File():
         except (EOFError, struct.error) as ex:
             raise ODOL_Error("File ends inside the ODOL header: %s" % ex) from ex
 
-        if output.version != VERSION:
-            raise ODOL_Error("Unsupported ODOL version: %d (only %d is supported)" % (output.version, VERSION))
+        if output.version not in SUPPORTED_VERSIONS:
+            raise ODOL_Error("Unsupported ODOL version: %d (only %s are supported)"
+                             % (output.version, " and ".join(str(item) for item in SUPPORTED_VERSIONS)))
 
         try:
             count_lods = read_count(file, file_size, "LOD")
@@ -836,6 +930,10 @@ class ODOL_File():
 
         read_lod_table(file, output, count_lods, file_size)
 
+        # Only the LOD stored last is allowed the trailing tail, matching the address
+        # table's own allowance for it.
+        last = output.lod_starts.index(max(output.lod_starts)) if output.lod_starts else -1
+
         # One unreadable LOD must not cost the ones that can be read: a model whose
         # shadow volume trips the layout is still worth importing for its visuals.
         # Every failure mode of the body reader is collected here, including the ones
@@ -843,7 +941,8 @@ class ODOL_File():
         for index, (start, end) in enumerate(zip(output.lod_starts, output.lod_ends)):
             try:
                 file.seek(start)
-                lod = ODOL_LOD.read(file, output.version, end, file_size, output.bones)
+                slack = TRAILING_SLACK if index == last else 0
+                lod = ODOL_LOD.read(file, output.version, end, file_size, output.bones, slack)
                 lod.index = index
                 lod.resolution = output.resolutions[index]
                 output.lods.append(lod)

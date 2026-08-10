@@ -30,6 +30,15 @@ HOUSE = r"P:\DZ\structures_sakhal\residential\houses\House_1W02_Blue.p3d"
 # weights, which is the only file in this set that exercises the weight-byte decode.
 JACKET = r"P:\DZ\characters\tops\BDU_Jacket_f.p3d"
 
+# ODOL v53. Everything above is v54, which is what the game ships; v53 is what the DayZ
+# Tools binarizer writes, and so what almost every mod on disk actually contains. These
+# two are a third party mod's files rather than Bohemia's, and are equally not to be
+# committed here. The magazine is small enough that nothing in it is LZO compressed,
+# which is why the rifle is kept alongside it.
+V53_MODELS = r"P:\Mods\@Dead City Rebalance\Addons\IMPWMOD\weapons\automatic\hk417\models"
+V53_MAGAZINE = os.path.join(V53_MODELS, "mag_hk417_10rnd.p3d")
+V53_RIFLE = os.path.join(V53_MODELS, "hk417.p3d")
+
 
 COUNT_LODS = 2
 BODY = 8000  # per LOD, so that addresses are as large as they are in real models
@@ -77,14 +86,17 @@ def make_animations():
     return struct.pack("<II", 0, 0)  # no animation classes, no bone mapping
 
 
-def make_model(middle):
+def make_model(middle, version = 54, last_lod_overrun = 0):
     # `middle` is whatever sits between ModelInfo and the LOD address table.
-    header = b"ODOL" + struct.pack("<II", 54, COUNT_LODS)
+    # `last_lod_overrun` pushes the end address of the LOD stored last past the end of
+    # the file, which is what real v53 models do by 16 bytes.
+    header = b"ODOL" + struct.pack("<II", version, COUNT_LODS)
     header += struct.pack("<%df" % COUNT_LODS, *[1.0] * COUNT_LODS)
 
     table_end = len(header) + len(make_model_info()) + len(middle) + COUNT_LODS * 9
     starts = [table_end + i * BODY for i in range(COUNT_LODS)]
     ends = [start + BODY for start in starts]
+    ends[-1] += last_lod_overrun
 
     table = struct.pack("<%dI" % COUNT_LODS, *starts)
     table += struct.pack("<%dI" % COUNT_LODS, *ends)
@@ -143,6 +155,16 @@ class TestSignature(unittest.TestCase):
     def test_unsupported_version_raises(self):
         with self.assertRaises(odol.ODOL_Error):
             odol.ODOL_File.read(make_header(version = 73))
+
+    def test_both_dayz_versions_get_past_the_version_gate(self):
+        # 53 is what the DayZ Tools binarizer writes and 54 is what the game ships, so
+        # both have to pass. make_header stops after the resolutions, so the read fails
+        # later on; what matters is that it is not the version that stopped it.
+        for version in (53, 54):
+            with self.assertRaises(odol.ODOL_Error) as caught:
+                odol.ODOL_File.read(make_header(version = version))
+
+            self.assertNotIn("Unsupported ODOL version", str(caught.exception))
 
 
 @unittest.skipUnless(os.path.isfile(DRUM), "test corpus not available")
@@ -786,15 +808,232 @@ class TestNormalCountGuard(unittest.TestCase):
         self.assertIn("Normal count", str(caught.exception))
 
 
+# Real stage transforms are identity or near it, never all zeros. The distinction is
+# not cosmetic: an all-zero transform reads as a valid material tail from several
+# offsets at once, so a fixture built with one measures nothing.
+IDENTITY_TRANSFORM = [1.0, 0.0, 0.0, 0.0,
+                      0.0, 1.0, 0.0, 0.0,
+                      0.0, 0.0, 1.0, 0.0]
+
+
+def make_material(version = 16, extended = 14, surface = "", stages = ("data\\a_co.paa",),
+                  transform = None):
+    # A well formed EmbeddedMaterial. `extended` is the width of the block whose size
+    # the reader has to recover, so a test can hand it a width and check it comes back.
+    data = b"test.rvmat\x00" + struct.pack("<I", version)
+    data += struct.pack("<24f", *([0.0] * 24))          # emissive .. specular_copy
+    data += struct.pack("<f", 50.0)                     # specular power
+    data += struct.pack("<%df" % extended, *([1.0] * extended))
+    data += struct.pack("<4I", 102, 23, 1, 1)           # pixel, vertex, main light, fog
+    data += surface.encode() + b"\x00"
+    data += struct.pack("<2I", 1, 0)                    # render flag count and flags
+    data += struct.pack("<2I", len(stages), 1)          # stage and tex gen counts
+
+    for stage in stages:
+        data += struct.pack("<I", 3) + stage.encode() + b"\x00" + struct.pack("<I", 1) + b"\x00"
+
+    data += struct.pack("<I", 0)                        # uv source
+    data += struct.pack("<12f", *(transform if transform else IDENTITY_TRANSFORM))
+    data += struct.pack("<I", 3) + b"\x00" + struct.pack("<I", 0) + b"\x00"   # stage TI
+
+    return data
+
+
+class TestMaterialLayoutSearch(unittest.TestCase):
+    """The extended block between specularPower and the shader ids widens with the
+    material version by no rule worth extrapolating, so the reader recovers its width
+    from the file. What matters is that it lands on the exact end of the material:
+    materials are read inline, so being off by any amount silently shifts every
+    following field in the LOD rather than failing where it happened."""
+
+    def check(self, data):
+        file = io.BytesIO(data)
+        name = odol.read_material(file, len(data))
+        self.assertEqual(name, "test.rvmat")
+        self.assertEqual(file.tell(), len(data))
+
+    def test_recovers_the_measured_widths(self):
+        # 15 and 16 are what ODOL v53 writes, 20 is what v54 writes.
+        for version, extended in ((15, 10), (16, 14), (20, 26)):
+            with self.subTest(version = version):
+                self.check(make_material(version = version, extended = extended))
+
+    def test_recovers_a_width_no_corpus_has_shown(self):
+        # The whole point of searching rather than tabulating: a material version this
+        # module has never seen costs nothing.
+        self.check(make_material(version = 17, extended = 18))
+
+    def test_recovers_the_width_with_a_surface_file(self):
+        self.check(make_material(surface = "dz\\data\\penetration\\metalPlate.bisurf"))
+
+    def test_a_stage_texture_may_carry_a_tab(self):
+        # Procedural texture strings end in one, and rejecting it costs whole LODs.
+        self.check(make_material(stages = ("#(argb,8,8,3)color(1,1,1,1,co)\t",)))
+
+    def test_no_fitting_layout_raises(self):
+        # Nothing after the colours can be read as a material tail at any width.
+        data = b"test.rvmat\x00" + struct.pack("<I", 16) + b"\xff" * 512
+        with self.assertRaises(odol.ODOL_Error) as caught:
+            odol.read_material(io.BytesIO(data), len(data))
+
+        self.assertIn("No layout fits", str(caught.exception))
+
+    def test_an_ambiguous_material_raises_rather_than_guessing(self):
+        # The search is decisive because a material tail is busy. Strip that away - an
+        # all-zero stage transform is enough - and several offsets read as a valid tail.
+        # No corpus material does this (none over 9310 from both ODOL versions), but if
+        # one ever does, picking one of the candidates would silently shift the rest of
+        # the LOD, so the reader has to say so instead.
+        data = make_material(transform = [0.0] * 12)
+        with self.assertRaises(odol.ODOL_Error) as caught:
+            odol.read_material(io.BytesIO(data), len(data))
+
+        self.assertIn("layouts", str(caught.exception))
+
+
+class TestTrailingSlack(unittest.TestCase):
+    """The LOD stored last may declare an end address a little past the end of the
+    file, and past its own rest data. That is tolerated only for that one LOD, so the
+    rest data check stays an exact checksum everywhere else."""
+
+    def test_last_lod_may_overrun_the_file(self):
+        file, starts, ends = make_model(b"\x00", version = 53, last_lod_overrun = odol.TRAILING_SLACK)
+        model = odol.ODOL_File.read(file)
+        self.assertEqual(model.lod_starts, starts)
+        self.assertEqual(model.lod_ends, ends)
+
+    def test_overrun_past_the_slack_is_rejected(self):
+        file, _, _ = make_model(b"\x00", version = 53, last_lod_overrun = odol.TRAILING_SLACK + 1)
+        with self.assertRaises(odol.ODOL_Error):
+            odol.ODOL_File.read(file)
+
+    def test_only_the_last_lod_gets_the_slack(self):
+        # A table whose first LOD overruns instead of its last one is not the tail the
+        # slack exists for, it is a broken table.
+        file_size = 1000
+        starts = [100, 200]
+        ends = [file_size + odol.TRAILING_SLACK, 300]
+        data = struct.pack("<2I", *starts) + struct.pack("<2I", *ends) + bytes([1, 1])
+        with self.assertRaises(odol.ODOL_Error) as caught:
+            odol.read_table_at(io.BytesIO(data), 0, 2, file_size, 0)
+
+        self.assertIn("end address", str(caught.exception))
+
+
 class TestMaterialGuard(unittest.TestCase):
     def test_unprintable_material_name_is_rejected(self):
         # A desynchronised stream reads a material name out of arbitrary bytes. That
         # has to fail rather than shift every following field in the LOD.
-        stream = io.BytesIO(b"\x01\x02\x03\x00" + struct.pack("<I", 20) + b"\x00" * 512)
+        data = b"\x01\x02\x03\x00" + struct.pack("<I", 20) + b"\x00" * 512
         with self.assertRaises(odol.ODOL_Error) as caught:
-            odol.read_material(stream)
+            odol.read_material(io.BytesIO(data), len(data))
 
         self.assertIn("desynchronised", str(caught.exception))
+
+
+@unittest.skipUnless(os.path.isfile(V53_MAGAZINE), "test corpus not available")
+class TestVersion53(unittest.TestCase):
+    """ODOL v53, which is what the DayZ Tools binarizer writes and so what almost every
+    mod on disk contains. It differs from the v54 the game ships in exactly two places,
+    and both are checked here against a real model."""
+
+    @classmethod
+    def setUpClass(cls):
+        with open(V53_MAGAZINE, "rb") as file:
+            cls.model = odol.ODOL_File.read(file)
+
+        cls.file_size = os.path.getsize(V53_MAGAZINE)
+
+    def test_every_lod_parses(self):
+        self.assertEqual(self.model.version, 53)
+        self.assertEqual(self.model.failed_lods, [])
+        self.assertEqual(len(self.model.lods), 5)
+
+    def test_lod_table_matches_measured_values(self):
+        # Measured by hand on this file: the LODs are stored in reverse resolution
+        # order, so the highest resolution one sits last and ends past the file.
+        self.assertEqual(self.model.lod_starts, [2786, 2308, 1598, 1153, 361])
+        self.assertEqual(self.model.lod_ends, [110519, 2786, 2308, 1598, 1153])
+        self.assertEqual(self.file_size, 110503)
+
+    def test_the_last_stored_lod_overruns_by_exactly_the_slack(self):
+        # This is the whole reason TRAILING_SLACK exists, so it has to be pinned to a
+        # real file rather than only to the synthetic one in TestTrailingSlack.
+        last = self.model.lod_starts.index(max(self.model.lod_starts))
+        self.assertEqual(self.model.lod_ends[last] - self.file_size, odol.TRAILING_SLACK)
+
+    def test_the_overrunning_lod_fails_without_the_slack(self):
+        # And that the slack is doing work: the same LOD read with an exact rest data
+        # check is rejected, by exactly the 16 bytes the slack allows.
+        last = self.model.lod_starts.index(max(self.model.lod_starts))
+        with open(V53_MAGAZINE, "rb") as file:
+            file.seek(self.model.lod_starts[last])
+            with self.assertRaises(odol.ODOL_Error) as caught:
+                odol.ODOL_LOD.read(file, self.model.version, self.model.lod_ends[last],
+                                   self.file_size, self.model.bones, 0)
+
+        self.assertIn("Rest data", str(caught.exception))
+
+    def test_materials_decode_at_the_v53_widths(self):
+        # v53 writes material versions 15 and 16, against v54's 20. Their names have to
+        # come out intact, which they only do if the recovered width was right.
+        names = [name for lod in self.model.lods for name in lod.materials]
+        self.assertTrue(names)
+        for name in names:
+            self.assertTrue(name.endswith(".rvmat"), name)
+
+    def test_vertices_fill_the_declared_bounding_box(self):
+        # The same guarantee TestLODBody gives for v54: the box is stored uncompressed
+        # while the vertices are not, so the box is an independent check on the decode.
+        checked = 0
+        for lod in self.model.lods:
+            if not lod.vertices:
+                continue
+
+            checked += 1
+            for axis in range(3):
+                low = min(vertex[axis] for vertex in lod.vertices)
+                high = max(vertex[axis] for vertex in lod.vertices)
+                self.assertGreaterEqual(low, lod.bbox_min[axis] - 0.01)
+                self.assertLessEqual(high, lod.bbox_max[axis] + 0.01)
+
+        self.assertTrue(checked)
+
+
+@unittest.skipUnless(os.path.isfile(V53_RIFLE), "test corpus not available")
+class TestVersion53Rifle(unittest.TestCase):
+    def setUp(self):
+        with open(V53_RIFLE, "rb") as file:
+            self.model = odol.ODOL_File.read(file)
+
+    def test_a_larger_model_parses_whole(self):
+        # The magazine is small enough that every array in it stays under the LZO
+        # threshold. The rifle is not, so it is what shows the v53 changes surviving
+        # compressed vertex, normal and index arrays.
+        self.assertEqual(self.model.version, 53)
+        self.assertEqual(self.model.failed_lods, [])
+        self.assertTrue(any(len(lod.vertices) > 1000 for lod in self.model.lods))
+
+    def test_converts_to_a_readable_mlod_model(self):
+        # Reading is only half the path the importer takes. The conversion is shared
+        # with v54, but nothing else proves a v53 model survives it.
+        odol_to_mlod, p3d = load_io("odol_to_mlod", "data_p3d")
+        mlod = odol_to_mlod.convert(self.model)
+
+        self.assertIsInstance(mlod, p3d.P3D_MLOD)
+        self.assertEqual(len(mlod.lods), len(self.model.lods))
+
+        for lod in mlod.lods:
+            for face in lod.faces:
+                vertices, normals, uvs, texture, material, flag = face
+                self.assertIn(len(vertices), (3, 4))
+                self.assertEqual(len(uvs), len(vertices))
+                self.assertEqual(len(normals), len(vertices))
+                for index in vertices:
+                    self.assertLess(index, len(lod.verts))
+
+                for index in normals:
+                    self.assertLess(index, len(lod.normals))
 
 
 # Everything above that does not depend on DRUM/HOUSE only proves the reader is
@@ -822,6 +1061,12 @@ CORPUS_GUARANTEES = (
     (DRUM, "TestConversion (55galDrum.p3d) - the ODOL->MLOD conversion, and in particular that the "
            "converted faces keep their stored winding and unflipped normals both pointing outward "
            "(vertices absolute with no centre offset), which the brief's sketch gets backwards"),
+    (V53_MAGAZINE, "TestVersion53 (mag_hk417_10rnd.p3d) - ODOL v53, the version the DayZ Tools "
+                   "binarizer writes and so the one almost every mod contains: that its material "
+                   "layout is recovered at the v53 widths, and that the LOD stored last really does "
+                   "declare an end 16 bytes past the file, which is what TRAILING_SLACK exists for"),
+    (V53_RIFLE, "TestVersion53Rifle (hk417.p3d) - the same v53 layout surviving LZO compressed "
+                "vertex, normal and index arrays, which the magazine is too small to reach"),
 )
 
 
