@@ -319,9 +319,16 @@ def process_lod(operator, logger, lod, materials, materials_lookup, categories, 
     logger.end_subproc()
 
     logger.start_subproc("Processing data:")
-    
+
+    # Before the mesh is built, not after: a zero area face makes Blender's custom
+    # normal code read out of bounds and kill the process outright, so it must never
+    # reach from_pydata. See P3D_LOD.remove_degenerate_faces.
+    removed_faces = lod.remove_degenerate_faces()
+    if removed_faces:
+        logger.step("Dropped %d degenerate face(s)" % removed_faces)
+
     mesh = bpy.data.meshes.new(lod_name)
-    
+
     mesh.from_pydata(*lod.pydata())
     mesh.update(calc_edges=True)
     

@@ -470,6 +470,40 @@ class P3D_LOD():
     def read_faces(self, file, count_faces):
         self.faces = [self.read_face(file) for i in range(count_faces)]
 
+    # A face whose corners do not all name distinct vertices has no area, and Blender
+    # cannot hold one. from_pydata builds it and mesh.update() reports a sensible loop
+    # count, but the mesh is malformed: on Blender 5.1.2 the following
+    # mesh.normals_split_custom_set() reads out of bounds and takes the process down
+    # with an access violation, with no Python exception to catch first.
+    #
+    # Hand authored models do contain them - 2406 faces across 9 of the 505 models in
+    # the IMPWMOD source tree, every one a triangle with a repeated corner - so they are
+    # dropped before the mesh is built rather than trusted. Binarized input has never
+    # produced one (none over 2339 ODOL models), which is why this only shows on .p3d
+    # sources.
+    #
+    # Loop normals, UVs, materials and face flags are all derived from this list
+    # afterwards, so dropping here keeps them in step. A selection tagg addresses faces
+    # by index, so those are remapped rather than left pointing at the wrong face.
+    def remove_degenerate_faces(self):
+        keep = [index for index, face in enumerate(self.faces) if len(set(face[0])) == len(face[0])]
+        removed = len(self.faces) - len(keep)
+        if not removed:
+            return 0
+
+        remap = {old: new for new, old in enumerate(keep)}
+        self.faces = [self.faces[index] for index in keep]
+
+        for tagg in self.taggs:
+            if not isinstance(tagg.data, P3D_TAGG_DataSelection):
+                continue
+
+            tagg.data.count_faces = len(self.faces)
+            tagg.data.weight_faces = [(remap[index], weight) for index, weight
+                                      in tagg.data.weight_faces if index in remap]
+
+        return removed
+
     @classmethod
     def read(cls, file):
 
