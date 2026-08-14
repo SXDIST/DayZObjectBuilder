@@ -268,11 +268,11 @@ class TestMassArrayGuard(unittest.TestCase):
         # to, allocating gigabytes before failing.
         file = io.BytesIO(struct.pack("<I", 2 ** 31) + b"\x00" * 64)
         with self.assertRaises(odol.ODOL_Error):
-            odol.skip_compressed_floats(file, 4096)
+            odol.read_compressed_floats(file, 4096)
 
-    def test_short_array_is_skipped_raw(self):
+    def test_short_array_is_read_raw(self):
         file = io.BytesIO(struct.pack("<I", 4) + b"\x00" * 32)
-        odol.skip_compressed_floats(file, 4096)
+        self.assertEqual(odol.read_compressed_floats(file, 4096), [0.0] * 4)
         self.assertEqual(file.tell(), 20)
 
 
@@ -1034,6 +1034,156 @@ class TestVersion53Rifle(unittest.TestCase):
 
                 for index in normals:
                     self.assertLess(index, len(lod.normals))
+
+
+def make_skeleton(name = "", bones = ()):
+    if not name:
+        return b"\x00"
+
+    data = name.encode() + b"\x00"
+    data += bytes([1])                              # is_discrete
+    data += struct.pack("<I", len(bones))
+    for bone, parent in bones:
+        data += bone.encode() + b"\x00" + parent.encode() + b"\x00"
+
+    data += b"\x00"                                 # obsolete pivots name, version > 44
+    return data
+
+
+def make_animation_block(count_lods = COUNT_LODS):
+    # Two classes: a rotation, which carries an axis in the anims-to-bones mapping, and
+    # a hide, which carries none. Between them they cover both record layouts.
+    data = struct.pack("<I", 2)
+
+    data += struct.pack("<I", 0)                    # type: rotation
+    data += b"bolt_rot\x00" + b"reload\x00"
+    data += struct.pack("<4f", 0.1, 0.9, 0.2, 0.8)  # min/max value, min/max phase
+    data += struct.pack("<I", 2)                    # source address: loop
+    data += struct.pack("<2f", 0.0, 1.5)            # angle0, angle1
+
+    data += struct.pack("<I", 9)                    # type: hide
+    data += b"mag_hide\x00" + b"reloadmagazine\x00"
+    data += struct.pack("<4f", 0.0, 1.0, 0.0, 1.0)
+    data += struct.pack("<I", 0)                    # source address: clamp
+    data += struct.pack("<f", 0.5)                  # hide value
+
+    data += struct.pack("<I", count_lods)
+    for _ in range(count_lods):
+        data += struct.pack("<I", 1)                # one bone
+        data += struct.pack("<I", 1)                # driven by one animation
+        data += struct.pack("<I", 0)
+
+    for _ in range(count_lods):
+        data += struct.pack("<i", 3)                # rotation drives bone 3
+        data += struct.pack("<3f", 1.0, 2.0, 3.0)   # axis position
+        data += struct.pack("<3f", 0.0, 0.0, 1.0)   # axis direction
+        data += struct.pack("<i", 1)                # hide drives bone 1, no axis follows
+
+    return data
+
+
+class TestSkeletonDecoded(unittest.TestCase):
+    """The skeleton only exists inside a binarized model - the source model.cfg it came
+    from is not shipped with it - so it is the sole record of the bone hierarchy, and
+    the parent of each bone has to survive, not just the name."""
+
+    def read(self, data):
+        file = io.BytesIO(data)
+        return odol.read_skeleton(file, 54, len(data))
+
+    def test_empty_name_means_no_skeleton(self):
+        skeleton = self.read(make_skeleton())
+        self.assertFalse(skeleton)
+        self.assertEqual(skeleton.bones, [])
+
+    def test_bones_keep_their_parents(self):
+        skeleton = self.read(make_skeleton("Weapon", [("recoil", ""), ("bolt", "recoil")]))
+
+        self.assertTrue(skeleton)
+        self.assertEqual(skeleton.name, "Weapon")
+        self.assertTrue(skeleton.is_discrete)
+        self.assertEqual(skeleton.bones, ["recoil", "bolt"])
+        self.assertEqual(skeleton.parents, ["", "recoil"])
+
+    def test_the_whole_record_is_consumed(self):
+        # read_skeleton sits inside the single sequential walk of ModelInfo, so leaving
+        # the cursor anywhere but the end shifts every field after it.
+        data = make_skeleton("Weapon", [("recoil", "")])
+        file = io.BytesIO(data + b"MARK")
+        odol.read_skeleton(file, 54, len(data) + 4)
+        self.assertEqual(file.read(4), b"MARK")
+
+
+class TestAnimationsDecoded(unittest.TestCase):
+    """The animation classes are what a rebuilt model.cfg is written from, so the reader
+    has to keep them rather than only walk their length."""
+
+    def read(self, data = None):
+        data = make_animation_block() if data is None else data
+        file = io.BytesIO(data)
+        animations = odol.read_animations(file, COUNT_LODS, len(data))
+        return animations, file
+
+    def test_class_fields_are_decoded(self):
+        animations, _ = self.read()
+        self.assertTrue(animations)
+        self.assertEqual(len(animations.classes), 2)
+
+        rotation, hide = animations.classes
+        self.assertEqual(rotation.name, "bolt_rot")
+        self.assertEqual(rotation.source, "reload")
+        self.assertEqual(rotation.type, 0)
+        self.assertAlmostEqual(rotation.min_value, 0.1, places = 6)
+        self.assertAlmostEqual(rotation.max_value, 0.9, places = 6)
+        self.assertAlmostEqual(rotation.min_phase, 0.2, places = 6)
+        self.assertAlmostEqual(rotation.max_phase, 0.8, places = 6)
+        self.assertEqual(rotation.source_address, 2)
+        self.assertAlmostEqual(rotation.value1, 1.5, places = 6)
+
+        self.assertEqual(hide.type, odol.ANIM_HIDE)
+        self.assertEqual(hide.name, "mag_hide")
+        self.assertAlmostEqual(hide.hide_value, 0.5, places = 6)
+
+    def test_bones_and_axes_are_kept_per_lod(self):
+        animations, _ = self.read()
+        rotation, hide = animations.classes
+
+        self.assertEqual(rotation.bones, [3] * COUNT_LODS)
+        self.assertEqual(hide.bones, [1] * COUNT_LODS)
+
+        # A hide animation stores no axis, so its per-LOD entry stays None while the
+        # rotation's holds the position and direction the model.cfg named.
+        self.assertEqual(hide.axes, [None] * COUNT_LODS)
+        for axis in rotation.axes:
+            position, direction = axis
+            self.assertEqual(tuple(position), (1.0, 2.0, 3.0))
+            self.assertEqual(tuple(direction), (0.0, 0.0, 1.0))
+
+    def test_the_whole_block_is_consumed(self):
+        # This walk is also one of read_lod_table's candidates: the position it leaves
+        # the cursor at is where the LOD address table is then looked for.
+        data = make_animation_block()
+        file = io.BytesIO(data + b"MARK")
+        odol.read_animations(file, COUNT_LODS, len(data) + 4)
+        self.assertEqual(file.read(4), b"MARK")
+
+    def test_unknown_type_is_rejected(self):
+        # A wrong candidate has to fail here rather than decode into nonsense, which is
+        # what tells read_lod_table the candidate was wrong.
+        data = struct.pack("<I", 1) + struct.pack("<I", 42) + b"x\x00" + b"y\x00"
+        data += struct.pack("<4f", 0.0, 1.0, 0.0, 1.0) + struct.pack("<I", 0)
+        with self.assertRaises(odol.ODOL_Error):
+            odol.read_animations(io.BytesIO(data), COUNT_LODS, len(data))
+
+
+class TestSelectionWeightDecode(unittest.TestCase):
+    def test_reserved_bytes_and_the_non_linear_range(self):
+        # The inline selection member uses the MLOD encoding, not vertexBoneRef's linear
+        # byte/255. Both ends are reserved and the rest is (255 - b) / 254.
+        self.assertEqual(odol.decode_selection_weight(0), 0.0)
+        self.assertEqual(odol.decode_selection_weight(1), 1.0)
+        self.assertAlmostEqual(odol.decode_selection_weight(255), 0.0, places = 6)
+        self.assertAlmostEqual(odol.decode_selection_weight(128), (255 - 128) / 254, places = 6)
 
 
 # Everything above that does not depend on DRUM/HOUSE only proves the reader is

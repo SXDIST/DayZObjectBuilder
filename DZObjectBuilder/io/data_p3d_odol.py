@@ -90,7 +90,19 @@ def find_odol_offset(file):
 #   frequent              bool         unknown               uint32
 #
 # The three DayZ additions total five bytes over the Arma 3 field set.
-def skip_model_info(file, version, file_size):
+#
+# What is kept is what an editable model cannot be rebuilt without: the skeleton, which
+# only exists here once a model has been binarized, and the per point mass array, which
+# is the Geometry LOD's #Mass# tagg folded into the header. Everything else is walked.
+class ODOL_ModelInfo():
+    def __init__(self):
+        self.skeleton = ODOL_Skeleton()
+        self.masses = []
+
+
+def read_model_info(file, version, file_size):
+    output = ODOL_ModelInfo()
+
     file.seek(4 * 6, 1)             # index .. or_hints
     file.seek(4 * 3, 1)             # aiming_center
     file.seek(4 * 3, 1)             # map colours, view_density
@@ -105,10 +117,10 @@ def skip_model_info(file, version, file_size):
     file.seek(4, 1)                 # shadow_offset
     file.seek(1, 1)                 # animated
 
-    bones = read_skeleton(file, version, file_size)
+    output.skeleton = read_skeleton(file, version, file_size)
 
     file.seek(1, 1)                 # map_type
-    skip_compressed_floats(file, file_size)  # per point masses of the geometry LOD
+    output.masses = read_compressed_floats(file, file_size)  # per point, geometry LOD
     file.seek(4 * 4, 1)             # mass, inv_mass, armor, inv_armor
     file.seek(13, 1)                # special_lod_indices
     file.seek(4, 1)                 # min_shadow
@@ -118,7 +130,7 @@ def skip_model_info(file, version, file_size):
     file.seek(1, 1)                 # frequent
     file.seek(4, 1)                 # unknown
 
-    return bones
+    return output
 
 
 # Below version 64 an array is LZO compressed whenever it would occupy at least
@@ -160,14 +172,14 @@ def read_count(file, file_size, label):
     return count
 
 
-def skip_compressed_floats(file, file_size):
+def read_compressed_floats(file, file_size):
     count = read_count(file, file_size, "float array")
     expected = 4 * count
     if expected < COMPRESSION_LIMIT:
-        file.seek(expected, 1)
-        return
+        return list(binary.read_floats(file, count)) if count else []
 
-    compression.lzo1x_decompress(file, expected, LZO_BI_VARIANT)
+    _, output = compression.lzo1x_decompress(file, expected, LZO_BI_VARIANT)
+    return list(struct.unpack("<%df" % count, bytes(output)))
 
 
 # Below version 64, a compressed block carries no size prefix of its own, so a
@@ -222,55 +234,126 @@ def read_condensed_array(file, element_size, file_size, bi_variant = LZO_BI_VARI
 # bone weights of their own in DayZ v54 (see the LOD reader), so the per-vertex
 # skinning has to be joined onto them by matching a selection's name to a bone's, and
 # that join needs this ordered list to turn a vertexBoneRef bone index into a name.
-def read_skeleton(file, version, file_size):
-    bones = []
-    name = binary.read_asciiz(file)
-    if not name:
-        return bones
+# The skeleton a model was binarized against. In an editable .p3d this lives in the
+# model.cfg beside the file, not in the model; binarizing folds it in, so this is the
+# only copy left in a binarized model and the only way to write that model.cfg back out.
+class ODOL_Skeleton():
+    def __init__(self):
+        self.name = ""
+        self.is_discrete = False
+        # Bone names in file order, and the parent name of each. The parent is a name
+        # rather than an index because that is how CfgSkeletons states it, and an empty
+        # parent means the bone is a root.
+        self.bones = []
+        self.parents = []
+        self.pivots = ""
 
-    file.seek(1, 1)                 # is_discrete
+    def __bool__(self):
+        return bool(self.name)
+
+
+def read_skeleton(file, version, file_size):
+    output = ODOL_Skeleton()
+    output.name = binary.read_asciiz(file)
+    if not output.name:
+        return output
+
+    output.is_discrete = binary.read_byte(file) == 1
     count_bones = read_count(file, file_size, "skeleton bone")
     for _ in range(count_bones):
         if file.tell() >= file_size:
             raise ODOL_Error("Skeleton bone list ran past the end of the file")
 
-        bones.append(binary.read_asciiz(file))  # bone name
-        binary.read_asciiz(file)                # parent name
+        output.bones.append(binary.read_asciiz(file))
+        output.parents.append(binary.read_asciiz(file))
 
     if version > 44:
-        binary.read_asciiz(file)    # obsolete pivots name
+        output.pivots = binary.read_asciiz(file)     # obsolete
 
-    return bones
+    return output
+
+
+# One animation class, as CfgModels declares it. The type decides which of the tail
+# fields carry meaning; the rest stay at their defaults.
+class ODOL_Animation():
+    def __init__(self):
+        self.type = 0
+        self.name = ""
+        self.source = ""
+        self.min_value = 0.0
+        self.max_value = 0.0
+        self.min_phase = 0.0
+        self.max_phase = 0.0
+        self.source_address = 0
+        self.hide_value = 0.0
+        # angle0/angle1 for the rotations, offset0/offset1 for the translations.
+        self.value0 = 0.0
+        self.value1 = 0.0
+        # Direct animations carry their axis inline. Every other type carries it per
+        # LOD in the anims-to-bones mapping instead, which is why it is kept there.
+        self.axis_position = (0.0, 0.0, 0.0)
+        self.axis_direction = (0.0, 0.0, 0.0)
+        self.angle = 0.0
+        self.axis_offset = 0.0
+        # Which bone this animation drives, one entry per LOD, -1 where it drives none.
+        # The value indexes the model's skeleton bone list; a model.cfg states that bone
+        # by name as the animation's selection.
+        self.bones = []
+        # The axis each LOD resolved for this animation, as (position, direction), or
+        # None. A model.cfg names an axis instead of stating it numerically, so this is
+        # what a name has to be matched back against.
+        self.axes = []
+
+
+class ODOL_Animations():
+    def __init__(self):
+        self.classes = []
+        # Per LOD, per skeleton bone, the animation indices that drive it. Redundant
+        # with ODOL_Animation.bones and kept only because it is what the file stores.
+        self.bones_to_animations = []
+
+    def __bool__(self):
+        return bool(self.classes)
 
 
 # Animation classes, followed by the bones-to-animations and animations-to-bones
-# mappings. Only lengths matter, the data is not used by the importer.
-def skip_animations(file, count_lods, file_size):
+# mappings.
+#
+# This walk doubles as one of the candidates read_lod_table tries when locating the LOD
+# address table, so it has to keep failing loudly on anything that does not decode: a
+# wrong candidate is told apart from the right one by whether this raises.
+def read_animations(file, count_lods, file_size):
+    output = ODOL_Animations()
+
     count_classes = binary.read_ulong(file)
     if count_classes > 10000:
         raise ODOL_Error("Implausible animation class count: %d" % count_classes)
 
-    types = []
     for _ in range(count_classes):
         if file.tell() >= file_size:
             raise ODOL_Error("Animation class list ran past the end of the file")
 
-        anim_type = binary.read_ulong(file)
-        types.append(anim_type)
+        animation = ODOL_Animation()
+        animation.type = binary.read_ulong(file)
+        animation.name = binary.read_asciiz(file)
+        animation.source = binary.read_asciiz(file)
+        (animation.min_value, animation.max_value,
+         animation.min_phase, animation.max_phase) = binary.read_floats(file, 4)
+        animation.source_address = binary.read_ulong(file)
 
-        binary.read_asciiz(file)    # name
-        binary.read_asciiz(file)    # source
-        file.seek(4 * 4, 1)         # min/max value, min/max phase
-        file.seek(4, 1)             # source address
-
-        if anim_type == ANIM_HIDE:
-            file.seek(4, 1)         # hide value
-        elif anim_type == ANIM_DIRECT:
-            file.seek(4 * 3 * 2 + 4 * 2, 1)  # axis position, direction, angle, offset
-        elif anim_type < ANIM_DIRECT:
-            file.seek(4 * 2, 1)     # rotation angles or translation offsets
+        if animation.type == ANIM_HIDE:
+            animation.hide_value = binary.read_float(file)
+        elif animation.type == ANIM_DIRECT:
+            animation.axis_position = tuple(binary.read_floats(file, 3))
+            animation.axis_direction = tuple(binary.read_floats(file, 3))
+            animation.angle = binary.read_float(file)
+            animation.axis_offset = binary.read_float(file)
+        elif animation.type < ANIM_DIRECT:
+            animation.value0, animation.value1 = binary.read_floats(file, 2)
         else:
-            raise ODOL_Error("Unknown animation type: %d" % anim_type)
+            raise ODOL_Error("Unknown animation type: %d" % animation.type)
+
+        output.classes.append(animation)
 
     # Models that declare the hasAnims byte but carry no animation classes write
     # this count as zero rather than repeating the LOD count.
@@ -280,15 +363,26 @@ def skip_animations(file, count_lods, file_size):
 
     for _ in range(count_bone_lods):
         count_bones = read_count(file, file_size, "animation bone")
+        per_lod = []
         for _ in range(count_bones):
             count_anims = read_count(file, file_size, "bone animation")
-            file.seek(4 * count_anims, 1)
+            per_lod.append(list(binary.read_ulongs(file, count_anims)) if count_anims else [])
+
+        output.bones_to_animations.append(per_lod)
 
     for _ in range(count_bone_lods):
-        for anim_type in types:
+        for animation in output.classes:
             index = binary.read_long(file)
-            if index != -1 and anim_type != ANIM_HIDE:
-                file.seek(4 * 3 * 2, 1)  # axis position and direction
+            animation.bones.append(index)
+
+            if index != -1 and animation.type != ANIM_HIDE:
+                position = tuple(binary.read_floats(file, 3))
+                direction = tuple(binary.read_floats(file, 3))
+                animation.axes.append((position, direction))
+            else:
+                animation.axes.append(None)
+
+    return output
 
 
 def read_table_at(file, position, count_lods, file_size, offset):
@@ -331,27 +425,30 @@ def read_lod_table(file, model, count_lods, file_size):
     #   C: no hasAnims byte, animations directly here
     #   A: hasAnims byte = 0, table immediately after the byte
     #   D: table directly here, no animations at all
+    # Each candidate returns the position the table would start at, and whatever
+    # animation data it had to read to get there. Which candidate wins is what decides
+    # whether the model has animations at all, so the two are settled together.
     def after_flag_and_animations():
         file.seek(base + 1)
-        skip_animations(file, count_lods, file_size)
-        return file.tell()
+        animations = read_animations(file, count_lods, file_size)
+        return file.tell(), animations
 
     def after_animations():
         file.seek(base)
-        skip_animations(file, count_lods, file_size)
-        return file.tell()
+        animations = read_animations(file, count_lods, file_size)
+        return file.tell(), animations
 
     candidates = [
         ("hasAnims byte then animations", after_flag_and_animations),
         ("animations without hasAnims byte", after_animations),
-        ("hasAnims byte, no animations", lambda: base + 1),
-        ("no hasAnims byte, no animations", lambda: base),
+        ("hasAnims byte, no animations", lambda: (base + 1, ODOL_Animations())),
+        ("no hasAnims byte, no animations", lambda: (base, ODOL_Animations())),
     ]
 
     failures = []
     for label, locate in candidates:
         try:
-            position = locate()
+            position, animations = locate()
             starts, ends, permanent = read_table_at(file, position, count_lods, file_size, model.offset)
         # A wrong candidate can walk skip_animations() straight off the end of a
         # truncated file. IndexError included because compression.lzo1x_decompress
@@ -363,6 +460,7 @@ def read_lod_table(file, model, count_lods, file_size):
         model.lod_starts = starts
         model.lod_ends = ends
         model.permanent = permanent
+        model.animations = animations
         return
 
     raise ODOL_Error("Could not locate the LOD address table after ModelInfo (ends at %d).\n  %s" % (base, "\n  ".join(failures)))
@@ -587,6 +685,10 @@ class ODOL_NamedSelection():
         self.faces = []
         self.vertices = []
         self.weights = []
+        # Set for a selection the engine keeps as a separate drawable run, which is
+        # what a model.cfg names in its sections[] array. Binarizing consumes that
+        # array into this flag, so the flag is the only way back to it.
+        self.is_sectional = False
 
 
 # vertexBoneRef weight byte -> weight float. Measured, NOT assumed: on BDU_Jacket_f.p3d
@@ -602,6 +704,16 @@ WEIGHT_SCALE = 255.0
 # A vertex references at most four bones. Anything above that is a desynchronised stream
 # rather than real skinning, and has to fail the LOD instead of over-reading the block.
 MAX_VERTEX_BONES = 4
+
+
+# The other weight encoding: the non-linear one a named selection's inline weight member
+# uses, which is the same one MLOD selection taggs use (P3D_TAGG_DataSelection). Distinct
+# from the linear vertexBoneRef byte above, and applied to a different array.
+def decode_selection_weight(weight):
+    if weight in (0, 1):
+        return float(weight)
+
+    return (255 - weight) / 254
 
 # vertexBoneRef entry: uint32 weight count, then four (uint8 bone index, uint8 weight)
 # pairs, always 12 bytes whether or not vertexBoneRefIsSimple is set. Measured on both
@@ -695,6 +807,8 @@ class ODOL_LOD():
 
     @classmethod
     def read(cls, file, version, end, file_size, bones = (), slack = 0):
+        # `bones` is the model's skeleton bone name list, indexed by the
+        # subSkeletonsToSkeleton table when the skinning is joined on below.
         output = cls()
 
         count_proxies = read_count(file, file_size, "proxy")
@@ -788,13 +902,32 @@ class ODOL_LOD():
             selection.faces = list(struct.unpack(face_format % count_selected_faces, face_raw)) if count_selected_faces else []
 
             file.seek(4, 1)             # always zero
-            file.seek(1, 1)             # is sectional
+            selection.is_sectional = binary.read_byte(file) == 1
             read_compressed_array(file, 4, read_count(file, file_size, "selected section"))
-            # In DayZ v54 these two arrays are always empty; the skinning lives in
-            # vertexBoneRef and is joined on below. They are still read to advance the
-            # cursor, and honoured if a file ever does carry them inline.
-            read_compressed_array(file, index_size, read_count(file, file_size, "selected vertex"))
-            read_compressed_array(file, 1, read_count(file, file_size, "selection weight"))
+            # The inline vertex member. On a visual LOD it is empty and the skinning
+            # arrives through vertexBoneRef instead, which is what gets joined on below.
+            # A Memory LOD is the opposite case and the reason this is read rather than
+            # walked: its selections have no faces, so these indices are the only record
+            # of which points a named selection holds - the memory points a config
+            # addresses, and the axes a model.cfg names for its animations. Measured on
+            # mp443.p3d, whose Memory LOD carries 23 selections and not one face.
+            count_selected_vertices = read_count(file, file_size, "selected vertex")
+            vertex_raw = read_compressed_array(file, index_size, count_selected_vertices)
+            if len(vertex_raw) < index_size * count_selected_vertices:
+                raise ODOL_Error("Selected vertex array is %d bytes, expected %d"
+                                 % (len(vertex_raw), index_size * count_selected_vertices))
+
+            if count_selected_vertices:
+                selection.vertices = list(struct.unpack(face_format % count_selected_vertices, vertex_raw))
+
+            # One byte of weight per selected vertex, in the non-linear MLOD selection
+            # encoding rather than vertexBoneRef's linear one. An empty array means every
+            # selected vertex is fully bound, which is what a memory point selection is.
+            count_weights = read_count(file, file_size, "selection weight")
+            weight_raw = read_compressed_array(file, 1, count_weights)
+            selection.weights = [decode_selection_weight(byte) for byte in weight_raw[:count_weights]]
+            if len(selection.weights) < len(selection.vertices):
+                selection.weights += [1.0] * (len(selection.vertices) - len(selection.weights))
 
             output.named_selections.append(selection)
 
@@ -885,13 +1018,23 @@ class ODOL_File():
     def __init__(self):
         self.version = 0
         self.offset = 0
-        self.bones = []
+        # What binarizing folded in from the model.cfg beside the source model, and so
+        # what writing that model.cfg back out has to be rebuilt from.
+        self.skeleton = ODOL_Skeleton()
+        self.animations = ODOL_Animations()
+        self.masses = []
         self.resolutions = []
         self.lod_starts = []
         self.lod_ends = []
         self.permanent = []
         self.lods = []
         self.failed_lods = []
+
+    # Kept as the skeleton's own list under its old name, because a bone index anywhere
+    # in a model - vertexBoneRef, the animation mapping - indexes exactly this.
+    @property
+    def bones(self):
+        return self.skeleton.bones
 
     @classmethod
     def read(cls, file):
@@ -924,9 +1067,12 @@ class ODOL_File():
         # where the decompressor's file.read(1)[0] raises IndexError, not EOFError.
         # Every failure on malformed input has to leave ODOL_File.read as ODOL_Error.
         try:
-            output.bones = skip_model_info(file, output.version, file_size)
+            model_info = read_model_info(file, output.version, file_size)
         except (IndexError, EOFError, ValueError, struct.error, compression.LZO_Error) as ex:
             raise ODOL_Error("Failed to read past ModelInfo: %s" % ex) from ex
+
+        output.skeleton = model_info.skeleton
+        output.masses = model_info.masses
 
         read_lod_table(file, output, count_lods, file_size)
 
