@@ -149,7 +149,10 @@ def preview_targets_owner(preview, owner):
 
 def get_preview_for_owner(owner):
     preview_name = owner.get(proxy_preview_object_prop)
-    preview = bpy.data.objects.get(preview_name)
+    # An object that never had a preview carries no name at all, and bpy.data.objects.get
+    # raises on None rather than returning it. Reached through the depsgraph handler, so
+    # it fires on every scene update: headless it buries the console in tracebacks.
+    preview = bpy.data.objects.get(preview_name) if preview_name else None
 
     if preview_targets_owner(preview, owner):
         return preview
