@@ -164,9 +164,17 @@ class P3D_TAGG_DataSelection():
         
         data_verts = bytearray(file.read(count_verts))
         output.weight_verts = [(i, cls.decode_weight(value)) for i, value in enumerate(data_verts) if value > 0]
-        file.seek(count_faces, 1) # skip face selection data
-        # data_faces = bytearray(file.read(count_faces))
-        # output.weight_faces = [(i, cls.decode_weight(value)) for i, value in enumerate(data_faces) if value > 0]
+
+        # Face membership is read, not skipped. Blender has no use for it - the importer
+        # rebuilds selections from vertices - but write() emits this block unconditionally,
+        # so skipping it here makes every read/write round trip through P3D_MLOD silently
+        # zero it. That is not cosmetic: binarize builds a drawable section from a named
+        # selection's FACES, so a model round tripped this way comes out with every
+        # sectional selection at zero faces, and hiddenSelectionsTextures then has nothing
+        # to paint. Measured on IMPWMOD 15.08.2026 - 505 models lost every selection that
+        # way in a single pass that only meant to drop two LODs.
+        data_faces = bytearray(file.read(count_faces))
+        output.weight_faces = [(i, cls.decode_weight(value)) for i, value in enumerate(data_faces) if value > 0]
 
         return output
     
