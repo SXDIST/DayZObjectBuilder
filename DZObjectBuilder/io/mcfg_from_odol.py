@@ -284,9 +284,101 @@ def build(models):
     return config.from_dict({"root": root}), unmatched
 
 
+# Written to match the shape of a vanilla DayZ model.cfg (P:\DZ\weapons\firearms\AKM),
+# rather than whatever a generic config writer produces: the skeleton class carries
+# skeletonInherit, isDiscrete and SkeletonBones in that order and nothing else, and a
+# model class carries only skeletonName and sections[]. The extra properties an earlier
+# version emitted here - sectionsInherit on the model class, pivotsModel on the skeleton -
+# appear in no vanilla file.
+def format_file(models):
+    unmatched = []
+
+    skeletons = {}
+    for _, odol_file in models:
+        skeleton = odol_file.skeleton
+        if skeleton.name and skeleton.name not in skeletons:
+            skeletons[skeleton.name] = skeleton
+
+    lines = []
+    if skeletons:
+        lines.append("class cfgSkeletons")
+        lines.append("{")
+        for name, skeleton in skeletons.items():
+            lines.append("\tclass %s" % name)
+            lines.append("\t{")
+            lines.append('\t\tskeletonInherit = "";')
+            lines.append("\t\tisDiscrete = %d;" % int(skeleton.is_discrete))
+            lines.append("\t\tSkeletonBones[]=")
+            lines.append("\t\t{")
+            pairs = ['\t\t\t"%s"\t,"%s"' % (bone, parent)
+                     for bone, parent in zip(skeleton.bones, skeleton.parents)]
+            lines.append(",\n".join(pairs))
+            lines.append("\t\t};")
+            lines.append("\t};")
+
+        lines.append("};")
+
+    lines.append("class CfgModels")
+    lines.append("{")
+    lines.append("\tclass Default")
+    lines.append("\t{")
+    lines.append("\t\tsections[] = {};")
+    lines.append('\t\tsectionsInherit="";')
+    lines.append('\t\tskeletonName = "";')
+    lines.append("\t};")
+
+    for name, odol_file in models:
+        lines.append("\tclass %s:Default" % name)
+        lines.append("\t{")
+        lines.append('\t\tskeletonName="%s";' % odol_file.skeleton.name)
+
+        names = sections(odol_file)
+        if names:
+            lines.append("\t\tsections[]=")
+            lines.append("\t\t{")
+            lines.append(",\n".join('\t\t\t"%s"' % item for item in names))
+            lines.append("\t\t};")
+
+        if odol_file.animations:
+            candidates = axis_candidates(odol_file)
+            animations = []
+            for animation in odol_file.animations.classes:
+                if not animation.name:
+                    continue
+
+                missing = []
+                properties = animation_properties(animation, odol_file.bones, candidates, missing)
+                unmatched.extend("%s/%s" % (name, item) for item in missing)
+
+                animations.append("\t\t\tclass %s" % animation.name)
+                animations.append("\t\t\t{")
+                for key, value in properties.items():
+                    if isinstance(value, str):
+                        animations.append('\t\t\t\t%s="%s";' % (key, value))
+                    elif isinstance(value, list):
+                        animations.append("\t\t\t\t%s[]={%s};" % (key, ",".join("%f" % item for item in value)))
+                    elif isinstance(value, int):
+                        animations.append("\t\t\t\t%s=%d;" % (key, value))
+                    else:
+                        animations.append("\t\t\t\t%s=%f;" % (key, value))
+
+                animations.append("\t\t\t};")
+
+            if animations:
+                lines.append("\t\tclass Animations")
+                lines.append("\t\t{")
+                lines.extend(animations)
+                lines.append("\t\t};")
+
+        lines.append("\t};")
+
+    lines.append("};")
+    return "\n".join(lines) + "\n", unmatched
+
+
 def write_file(models, path):
-    cfg, unmatched = build(models)
-    with open(path, "wt", encoding="utf8") as file:
-        file.write(cfg.format())
+    text, unmatched = format_file(models)
+    with open(path, "wt", encoding="utf8", newline="\r\n") as file:
+        file.write(text)
 
     return unmatched
