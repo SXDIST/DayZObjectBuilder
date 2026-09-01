@@ -141,8 +141,11 @@ def add_lod(context, source, ratio, resolution):
 # on some models, taking the whole run with it, and the add-on's own UI flags that option
 # as unreliable. Dropping it costs the authored shading on that one model - the exporter
 # writes recomputed normals instead - and is only ever used as the retry.
-DATA_WITH_NORMALS = {'NORMALS', 'PROPS', 'MASS', 'SELECTIONS', 'UV', 'MATERIALS'}
-DATA_WITHOUT_NORMALS = {'PROPS', 'MASS', 'SELECTIONS', 'UV', 'MATERIALS'}
+# FLAGS matters as much as the geometry: a vertex flag carries the texture clamp and
+# lighting modes, and importing without them exports every vertex as flag 0 - which looks
+# correct in Buldozer and wrong in game.
+DATA_WITH_NORMALS = {'NORMALS', 'FLAGS', 'PROPS', 'MASS', 'SELECTIONS', 'UV', 'MATERIALS'}
+DATA_WITHOUT_NORMALS = {'FLAGS', 'PROPS', 'MASS', 'SELECTIONS', 'UV', 'MATERIALS'}
 
 
 def process(path, destination, ratios, normals = True):

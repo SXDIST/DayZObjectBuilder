@@ -255,7 +255,13 @@ def convert_lod(lod, masses = ()):
     # Vertices absolute, no centre offset; axis swapped (Y/Z) to land in Blender's
     # Z-up frame, matching P3D_LOD.read_vert's swap of the on-disk MLOD frame.
     # Normals get the same axis swap, not negated (see module header).
-    output.verts = [(x, z, y, 0) for x, y, z in lod.vertices]
+    # The fourth component is the vertex flag, not padding: it carries the texture clamp
+    # and lighting modes the engine applies. ODOL holds the same value in its clip flags
+    # array, so it is carried straight over; a model whose flags are zeroed draws
+    # correctly in Buldozer and wrong in game.
+    flags = lod.vertex_flags
+    output.verts = [(x, z, y, flags[index] if index < len(flags) else 0)
+                    for index, (x, y, z) in enumerate(lod.vertices)]
     output.normals = [(x, z, y) for x, y, z in lod.normals]
 
     textures, materials = face_materials(lod)

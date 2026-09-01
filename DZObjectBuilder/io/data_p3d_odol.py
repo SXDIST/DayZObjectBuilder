@@ -795,6 +795,8 @@ class ODOL_LOD():
         self.sections = []
         self.named_selections = []
         self.properties = {}
+        # One per vertex, the same value MLOD stores as a vertex's fourth component.
+        self.vertex_flags = []
         # bbox_min, bbox_max and bbox_center are in the same frame as the vertices,
         # which is what makes them a usable check on the decompressed vertex stream.
         self.bbox_min = (0.0, 0.0, 0.0)
@@ -950,7 +952,12 @@ class ODOL_LOD():
             raise ODOL_Error("Rest data at %d is %d bytes, which ends at %d, not in [%d, %d] before the LOD end"
                              % (position, size_rest, position + size_rest, end - slack, end))
 
-        read_condensed_array(file, 4, file_size)        # clip flags
+        # Per-vertex clip flags. MLOD keeps the same value as the fourth component of a
+        # vertex, and it is not decoration: the bits carry the texture clamp modes and the
+        # lighting mode the engine applies. Dropping them writes every vertex as flag 0,
+        # which Buldozer does not show - it draws the mesh - while the game does.
+        raw_flags = read_condensed_array(file, 4, file_size)
+        output.vertex_flags = list(struct.unpack("<%dI" % (len(raw_flags) // 4), raw_flags)) if raw_flags else []
 
         # The first UV set is always present. The count that follows it is the total
         # number of sets, so it is one greater than the number still to come; the
