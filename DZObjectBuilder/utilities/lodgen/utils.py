@@ -1,8 +1,15 @@
+import re
+
 import bpy
 import bmesh
 from mathutils import Matrix, Vector
 
 from .constants import COLLECTION_ORDER
+
+# Blender uniquifies datablock names with a .001 suffix. A "Visuals" collection that
+# already exists in another scene forces this scene's own one to be created as
+# "Visuals.001", so every lookup here has to match on the base name.
+NAME_SUFFIX_PATTERN = re.compile(r"\.\d{3}$")
 
 
 def run_component_search(context, obj):
@@ -99,11 +106,46 @@ def create_bounding_box(context, source_obj, target_obj=None):
     return target_obj
 
 
+def base_collection_name(name):
+    return NAME_SUFFIX_PATTERN.sub("", name)
+
+
+def iter_scene_collections(scene):
+    # Every collection reachable from the scene root, the root itself excluded.
+    stack = list(scene.collection.children)
+    while stack:
+        collection = stack.pop()
+        yield collection
+        stack.extend(collection.children)
+
+
+def find_scene_collection(scene, collection_name):
+    # Exact name wins over a suffixed one, so a scene that owns the plain "Visuals" keeps
+    # using it even if a "Visuals.001" also ended up somewhere under its root.
+    fallback = None
+    for collection in iter_scene_collections(scene):
+        if collection.name == collection_name:
+            return collection
+        if fallback is None and base_collection_name(collection.name) == collection_name:
+            fallback = collection
+
+    return fallback
+
+
 def get_or_create_collection(context, collection_name):
-    if collection_name in bpy.data.collections:
-        return bpy.data.collections[collection_name]
+    # Scoped to the current scene on purpose. Collections are file wide datablocks, so a
+    # lookup in bpy.data hands back the "Visuals" of whichever scene happens to own that
+    # name, and the generated LODs then land in another scene's collection - which the
+    # collection sorting afterwards links into this scene, dragging that scene's whole
+    # model in with it. Working on several models in one .blend by switching scenes is
+    # the normal way to use this, so the collections have to be resolved per scene.
+    scene = context.scene
+    existing = find_scene_collection(scene, collection_name)
+    if existing is not None:
+        return existing
+
     new_collection = bpy.data.collections.new(collection_name)
-    context.scene.collection.children.link(new_collection)
+    scene.collection.children.link(new_collection)
     return new_collection
 
 
@@ -117,20 +159,22 @@ def get_or_create_subcollection(parent_collection, collection_name):
 
 
 def organize_collections(context):
+    # Only the scene's own top level collections are reordered. Reaching into bpy.data
+    # here would link other scenes' collections into this one; reaching into nested ones
+    # would yank a collection the user deliberately parented somewhere up to the root.
     scene = context.scene
-    existing = [
-        bpy.data.collections[name]
-        for name in COLLECTION_ORDER
-        if name in bpy.data.collections
-    ]
-    for col in existing:
-        try:
-            scene.collection.children.unlink(col)
-        except RuntimeError:
-            pass
-    for col in existing:
-        if col.name not in scene.collection.children:
-            scene.collection.children.link(col)
+
+    matched = {}
+    for collection in scene.collection.children:
+        base = base_collection_name(collection.name)
+        if base in COLLECTION_ORDER and base not in matched:
+            matched[base] = collection
+
+    ordered = [matched[name] for name in COLLECTION_ORDER if name in matched]
+    for collection in ordered:
+        scene.collection.children.unlink(collection)
+    for collection in ordered:
+        scene.collection.children.link(collection)
 
 
 def duplicate_object(context, obj, target_collection=None):
