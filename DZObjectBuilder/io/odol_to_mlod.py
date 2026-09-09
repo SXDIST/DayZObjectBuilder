@@ -273,16 +273,19 @@ def convert_lod(lod, masses = ()):
     count_verts = len(output.verts)
     count_faces = len(output.faces)
 
-    # UVSet 0 as a TAGG, per loop and flattened in face order. lod.uvsets() also
-    # derives set 0 from the faces, so this is a redundant-but-consistent copy;
-    # keeping the two identical is what makes the redundancy harmless.
-    uv_tagg = p3d.P3D_TAGG()
-    uv_tagg.name = "#UVSet#"
-    uv_data = p3d.P3D_TAGG_DataUVSet()
-    uv_data.id = 0
-    uv_data.uvs = [uv for face in output.faces for uv in face[2]]
-    uv_tagg.data = uv_data
-    output.taggs.append(uv_tagg)
+    # One #UVSet# tagg per set, per loop and flattened in face order. Set 0 is a
+    # redundant-but-consistent copy of what convert_face already wrote into the faces
+    # (lod.uvsets() derives set 0 from them), and keeping the two identical is what
+    # makes the redundancy harmless. The further sets exist nowhere else.
+    for set_index, uvs in enumerate(lod.uv_sets):
+        uv_tagg = p3d.P3D_TAGG()
+        uv_tagg.name = "#UVSet#"
+        uv_data = p3d.P3D_TAGG_DataUVSet()
+        uv_data.id = set_index
+        uv_data.uvs = [(uvs[vertex][0], 1 - uvs[vertex][1]) if 0 <= vertex < len(uvs) else (0.0, 0.0)
+                       for face in output.faces for vertex in face[0]]
+        uv_tagg.data = uv_data
+        output.taggs.append(uv_tagg)
 
     taken = set(selection.name for selection in lod.named_selections if selection.name)
     for selection in lod.named_selections:

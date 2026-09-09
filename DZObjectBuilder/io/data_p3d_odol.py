@@ -666,11 +666,9 @@ def read_section(file, offsets, file_size):
     return output
 
 
-def read_uv_set(file, file_size, keep):
+def read_uv_set(file, file_size):
     min_u, min_v, max_u, max_v = binary.read_floats(file, 4)
     raw = read_condensed_array(file, 4, file_size)
-    if not keep:
-        return []
 
     # UVs are quantised to two signed 16 bit values spanning the set's own bounds.
     values = struct.unpack("<%dh" % (len(raw) // 2), raw)
@@ -798,7 +796,11 @@ class ODOL_LOD():
     def __init__(self):
         self.vertices = []
         self.normals = []
-        self.uvs = []
+        # Every UV set the LOD carries, set 0 first. Kept in full rather than reduced to
+        # the first: 520 of the 2716 LODs in the local corpus carry a second one, and an
+        # MLOD holds each as its own #UVSet# tagg, so dropping them here loses data that
+        # the rest of the add-on is already able to represent.
+        self.uv_sets = []
         self.faces = []
         self.textures = []
         self.materials = []
@@ -816,6 +818,12 @@ class ODOL_LOD():
         # so a LOD's position in ODOL_File.lods is not its position in the address table.
         self.index = -1
         self.resolution = 0.0
+
+    # Set 0 by its old name. Face corners take their UV from it (see convert_face), and
+    # the vertex/UV count check below is stated against it.
+    @property
+    def uvs(self):
+        return self.uv_sets[0] if self.uv_sets else []
 
     @classmethod
     def read(cls, file, version, end, file_size, bones = (), slack = 0):
@@ -970,12 +978,11 @@ class ODOL_LOD():
         output.vertex_flags = list(struct.unpack("<%dI" % (len(raw_flags) // 4), raw_flags)) if raw_flags else []
 
         # The first UV set is always present. The count that follows it is the total
-        # number of sets, so it is one greater than the number still to come; the
-        # importer only keeps the first.
-        output.uvs = read_uv_set(file, file_size, True)
+        # number of sets, so it is one greater than the number still to come.
+        output.uv_sets = [read_uv_set(file, file_size)]
         count_uv_sets = read_count(file, file_size, "UV set")
         for _ in range(max(0, count_uv_sets - 1)):
-            read_uv_set(file, file_size, False)
+            output.uv_sets.append(read_uv_set(file, file_size))
 
         count_vertices = read_count(file, file_size, "vertex")
         raw = read_compressed_array(file, 12, count_vertices)
@@ -1001,8 +1008,10 @@ class ODOL_LOD():
         # neighborBoneRef follows, but nothing past the skinning is used and the LOD end
         # address already bounds it, so it is not read.
 
-        if output.vertices and len(output.uvs) != len(output.vertices):
-            raise ODOL_Error("LOD has %d vertices but %d UV pairs" % (len(output.vertices), len(output.uvs)))
+        for index, uvs in enumerate(output.uv_sets):
+            if output.vertices and len(uvs) != len(output.vertices):
+                raise ODOL_Error("LOD has %d vertices but UV set %d has %d pairs"
+                                 % (len(output.vertices), index, len(uvs)))
 
         if output.vertices and len(output.normals) != len(output.vertices):
             raise ODOL_Error("Normal count %d does not match vertex count %d" % (len(output.normals), len(output.vertices)))

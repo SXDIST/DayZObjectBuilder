@@ -9,7 +9,7 @@ import unittest.mock
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from _addon import load_io
 
-odol, compression = load_io("data_p3d_odol", "compression")
+odol, compression, odol_to_mlod = load_io("data_p3d_odol", "compression", "odol_to_mlod")
 
 DRUM = r"P:\DZ\gear\containers\55galDrum.p3d"
 
@@ -43,6 +43,10 @@ V53_RIFLE = os.path.join(V53_MODELS, "hk417.p3d")
 # LOD address table where v54 keeps one and v53 none; ModelInfo itself is the same length
 # in all three. A third party mod's file, and equally not to be committed here.
 V55_MODEL = r"Z:\Projects\DayZ Projects\AB_Models_SXDIST\workspace\CAWFA_CharactersRetex\data\eye_female.p3d"
+
+# Carries two UV sets in a visual LOD. Binarizing does not invent the second one, it is
+# in the source model, and a reader that drops it loses data silently.
+TWO_UV_SETS = r"Z:\Projects\DayZ Projects\AB_Models_SXDIST\workspace\IMPGMOD_original\equipment\armorunlvest\6b3\models\6b3_f.p3d"
 
 
 COUNT_LODS = 2
@@ -1145,6 +1149,51 @@ class TestVersion55Model(unittest.TestCase):
         self.assertEqual(len(self.model.skeleton.bones), 159)
 
 
+@unittest.skipUnless(os.path.isfile(TWO_UV_SETS), "test corpus not available")
+class TestMultipleUVSets(unittest.TestCase):
+    """The second UV set is read rather than skipped, and reaches the MLOD as its own
+    #UVSet# tagg with id 1 - which is the shape P3D_LOD.uvsets() expects."""
+
+    @classmethod
+    def setUpClass(cls):
+        with open(TWO_UV_SETS, "rb") as file:
+            cls.model = odol.ODOL_File.read(file)
+
+    def find_multi_uv_lod(self):
+        for lod in self.model.lods:
+            if len(lod.uv_sets) > 1:
+                return lod
+
+        self.fail("the model is expected to carry a LOD with two UV sets")
+
+    def test_second_set_is_kept(self):
+        lod = self.find_multi_uv_lod()
+        self.assertEqual(len(lod.uv_sets), 2)
+
+    def test_every_set_covers_every_vertex(self):
+        lod = self.find_multi_uv_lod()
+        for index, uvs in enumerate(lod.uv_sets):
+            self.assertEqual(len(uvs), len(lod.vertices), "UV set %d" % index)
+
+    def test_sets_are_not_copies_of_each_other(self):
+        lod = self.find_multi_uv_lod()
+        self.assertNotEqual(lod.uv_sets[0], lod.uv_sets[1])
+
+    def test_set_zero_still_reachable_as_uvs(self):
+        lod = self.find_multi_uv_lod()
+        self.assertEqual(lod.uvs, lod.uv_sets[0])
+
+    def test_conversion_emits_a_tagg_per_set(self):
+        lod = self.find_multi_uv_lod()
+        converted = odol_to_mlod.convert_lod(lod)
+        ids = sorted(tagg.data.id for tagg in converted.taggs if tagg.name == "#UVSet#")
+        self.assertEqual(ids, [0, 1])
+
+        sets = converted.uvsets()
+        self.assertEqual(sorted(sets), [0, 1])
+        self.assertEqual(len(sets[1]), sum(len(face[0]) for face in converted.faces))
+
+
 class TestSkeletonDecoded(unittest.TestCase):
     """The skeleton only exists inside a binarized model - the source model.cfg it came
     from is not shipped with it - so it is the sole record of the bone hierarchy, and
@@ -1283,6 +1332,9 @@ CORPUS_GUARANTEES = (
     (V55_MODEL, "TestVersion55Model (eye_female.p3d) - ODOL v55, what the current AddonBuilder "
                 "writes: two bytes between ModelInfo and the LOD address table instead of one, "
                 "with ModelInfo itself unchanged in length"),
+    (TWO_UV_SETS, "TestMultipleUVSets (6b3_f.p3d) - that the second UV set is read and reaches "
+                  "the MLOD as its own tagg. 520 of the corpus' 2716 LODs carry one, and without "
+                  "this test it is dropped silently"),
 )
 
 
