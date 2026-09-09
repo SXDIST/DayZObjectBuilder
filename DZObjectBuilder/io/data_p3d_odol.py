@@ -831,6 +831,14 @@ class ODOL_LOD():
         # subSkeletonsToSkeleton table when the skinning is joined on below.
         output = cls()
 
+        # The proxy table holds a model path and a transform per proxy, and it is skipped
+        # rather than read because it carries nothing the named selections do not. 4.2% of
+        # the proxy selections in a binarized model keep their name but lose their face
+        # (52 of 1228 over the local 633 model corpus), and the obvious idea is to recover
+        # those triangles from this table. Measured 2026-09-09: it cannot be done, because
+        # binarizing drops such a proxy from the table too. The table holds exactly 1176
+        # records against exactly 1176 proxy selections that still have a face, and none
+        # of the 52 empty ones is listed, by index or by path. The triangle is simply gone.
         count_proxies = read_count(file, file_size, "proxy")
         for _ in range(count_proxies):
             binary.read_asciiz(file)    # name
