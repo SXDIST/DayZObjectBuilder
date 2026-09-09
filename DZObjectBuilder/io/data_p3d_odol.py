@@ -666,6 +666,18 @@ def read_section(file, offsets, file_size):
     return output
 
 
+# A keyframe is a float time and a point array. Nothing in the importer uses them - MLOD
+# has no place to put them - but the layout is known, so they are walked rather than
+# treated as a broken LOD. No model in the local corpus carries any; this exists so that
+# one that does still imports its geometry.
+def skip_keyframes(file, file_size):
+    count = read_count(file, file_size, "keyframe")
+    for _ in range(count):
+        binary.read_float(file)                             # time
+        points = read_count(file, file_size, "keyframe point")
+        file.seek(4 * 3 * points, 1)
+
+
 def read_uv_set(file, file_size):
     min_u, min_v, max_u, max_v = binary.read_floats(file, 4)
     raw = read_condensed_array(file, 4, file_size)
@@ -964,9 +976,7 @@ class ODOL_LOD():
             key = binary.read_asciiz(file)
             output.properties[key] = binary.read_asciiz(file)
 
-        count_frames = read_count(file, file_size, "keyframe")
-        if count_frames:
-            raise ODOL_Error("Keyframes are not supported (%d present)" % count_frames)
+        skip_keyframes(file, file_size)
 
         file.seek(4 * 3, 1)             # icon colour, colour, special
         file.seek(1, 1)                 # vertex bone reference is simple

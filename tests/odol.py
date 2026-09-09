@@ -174,6 +174,22 @@ class TestVersion55(unittest.TestCase):
         self.assertEqual(model.lod_starts, starts)
 
 
+class TestKeyframes(unittest.TestCase):
+    """The importer has no use for keyframes, but their presence must not cost a whole
+    LOD: the layout is known, so it is walked rather than rejected."""
+
+    def test_keyframe_block_is_walked_not_rejected(self):
+        # float time, uint32 count, count * Vector3P
+        data = struct.pack("<I", 2)
+        data += struct.pack("<fI", 0.0, 1) + struct.pack("<3f", 1.0, 2.0, 3.0)
+        data += struct.pack("<fI", 1.0, 0)
+        file = io.BytesIO(data + b"MARK")
+
+        odol.skip_keyframes(file, len(data) + 4)
+
+        self.assertEqual(file.read(4), b"MARK")
+
+
 class TestSignature(unittest.TestCase):
     def test_clean_file_has_zero_offset(self):
         self.assertEqual(odol.find_odol_offset(make_header()), 0)
