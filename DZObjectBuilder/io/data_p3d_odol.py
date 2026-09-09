@@ -4,13 +4,15 @@
 # This module only reads; ODOL is never written. Parsed data is converted into the
 # MLOD model by odol_to_mlod.py, so the rest of the add-on sees one representation.
 #
-# Layout follows the publicly documented ODOL structure. DayZ ships two versions: the
-# game's own files are version 54, while the DayZ Tools binarizer writes 53, which is
-# what almost every mod on disk actually contains (3279 against 70 over a 3356 model
-# survey of an installed mod set). Both differ from Arma 3 in ModelInfo field set,
-# material version and an inconsistent hasAnims byte; those differences are handled
-# explicitly below. The two differ from each other in only two places, the material
-# layout and a tolerated tail on the last LOD, both documented where they are handled.
+# Layout follows the publicly documented ODOL structure. DayZ ships three versions: the
+# game's own files are version 54, the DayZ Tools binarizer writes 53, which is what
+# almost every mod on disk actually contains (3279 against 70 over a 3356 model survey
+# of an installed mod set), and the current AddonBuilder writes 55. All three differ
+# from Arma 3 in ModelInfo field set, material version and an inconsistent hasAnims
+# byte; those differences are handled explicitly below. Between themselves they differ
+# in the material layout, a tolerated tail on the last LOD, and how many bytes separate
+# ModelInfo from the LOD address table (none, one and two respectively), all documented
+# where they are handled.
 #
 # The ModelInfo layout below was derived by measurement against DayZ v54 models,
 # because the published documentation covers the Arma 3 field set only. Rather
@@ -32,7 +34,7 @@ class ODOL_Error(Exception):
 
 
 SIGNATURE = b"ODOL"
-SUPPORTED_VERSIONS = (53, 54)
+SUPPORTED_VERSIONS = (53, 54, 55)
 
 # The LOD stored last in the file may declare an end address this far past both the end
 # of the file and the end of its own rest data. Measured over 657 v53 models: 198 of them
@@ -443,6 +445,14 @@ def read_lod_table(file, model, count_lods, file_size):
         ("animations without hasAnims byte", after_animations),
         ("hasAnims byte, no animations", lambda: (base + 1, ODOL_Animations())),
         ("no hasAnims byte, no animations", lambda: (base, ODOL_Animations())),
+        # v55 puts TWO bytes here where v54 puts one and v53 none. ModelInfo itself is
+        # the same length in all three - v53 pays for its missing geometrySimple byte
+        # with an extra one before propertyClass - so this is the only change v55 needs.
+        # Kept last on purpose: over the 631 ODOL models of the local corpus the four
+        # shapes above still win everywhere they used to (D 567, A 44, B 9, C 9) and
+        # this one is reached by exactly the 2 v55 files, which is what pins it as the
+        # v55 shape rather than a looser fallback that happens to validate.
+        ("no hasAnims byte, table two bytes on", lambda: (base + 2, ODOL_Animations())),
     ]
 
     failures = []

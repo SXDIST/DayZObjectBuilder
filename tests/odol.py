@@ -39,6 +39,11 @@ V53_MODELS = r"P:\Mods\@Dead City Rebalance\Addons\IMPWMOD\weapons\automatic\hk4
 V53_MAGAZINE = os.path.join(V53_MODELS, "mag_hk417_10rnd.p3d")
 V53_RIFLE = os.path.join(V53_MODELS, "hk417.p3d")
 
+# ODOL v55, what the current AddonBuilder writes. Two bytes sit between ModelInfo and the
+# LOD address table where v54 keeps one and v53 none; ModelInfo itself is the same length
+# in all three. A third party mod's file, and equally not to be committed here.
+V55_MODEL = r"Z:\Projects\DayZ Projects\AB_Models_SXDIST\workspace\CAWFA_CharactersRetex\data\eye_female.p3d"
+
 
 COUNT_LODS = 2
 BODY = 8000  # per LOD, so that addresses are as large as they are in real models
@@ -138,6 +143,31 @@ class TestCandidateSearch(unittest.TestCase):
         # The error has to name what was tried, that is the only debugging handle
         # when a new model trips the layout.
         self.assertIn("hasAnims", str(caught.exception))
+
+
+class TestVersion55(unittest.TestCase):
+    """v55 puts two bytes between ModelInfo and the LOD address table. ModelInfo is the
+    same length as in v54, so all the reader needs is one more candidate offset, and it
+    must not take priority over the four that already exist."""
+
+    def test_table_two_bytes_after_model_info(self):
+        file, starts, ends = make_model(b"\x00\x00", version = 55)
+        model = odol.ODOL_File.read(file)
+
+        self.assertEqual(model.version, 55)
+        self.assertEqual(model.lod_starts, starts)
+        self.assertEqual(model.lod_ends, ends)
+        self.assertEqual(model.permanent, [True] * COUNT_LODS)
+
+    def test_version_55_is_accepted(self):
+        self.assertIn(55, odol.SUPPORTED_VERSIONS)
+
+    def test_v54_still_takes_the_one_byte_shape(self):
+        # The new candidate is last, so v54 has to keep resolving on the hasAnims byte
+        # rather than on the two byte offset.
+        file, starts, ends = make_model(b"\x00", version = 54)
+        model = odol.ODOL_File.read(file)
+        self.assertEqual(model.lod_starts, starts)
 
 
 class TestSignature(unittest.TestCase):
@@ -1082,6 +1112,39 @@ def make_animation_block(count_lods = COUNT_LODS):
     return data
 
 
+@unittest.skipUnless(os.path.isfile(V55_MODEL), "test corpus not available")
+class TestVersion55Model(unittest.TestCase):
+    """A real v55 model: three LODs, a 159 bone skeleton and no failed LOD. The synthetic
+    test above only covers the table offset - it is written with the same field widths as
+    the reader, so the same mistake in both would go unnoticed."""
+
+    @classmethod
+    def setUpClass(cls):
+        with open(V55_MODEL, "rb") as file:
+            cls.model = odol.ODOL_File.read(file)
+
+    def test_version_and_lods(self):
+        self.assertEqual(self.model.version, 55)
+        self.assertEqual(len(self.model.lods), 3)
+        self.assertEqual(self.model.failed_lods, [])
+
+    def test_resolutions(self):
+        resolutions = [lod.resolution for lod in self.model.lods]
+        self.assertAlmostEqual(resolutions[0], 0.0)
+        self.assertAlmostEqual(resolutions[1], 1100.0)
+        self.assertGreater(resolutions[2], 1e12)
+
+    def test_visual_lod_geometry(self):
+        lod = self.model.lods[0]
+        self.assertEqual(len(lod.vertices), 270)
+        self.assertEqual(len(lod.faces), 280)
+        self.assertEqual(len(lod.uvs), len(lod.vertices))
+
+    def test_skeleton(self):
+        self.assertEqual(self.model.skeleton.name, "DayzTemporarySkeleton")
+        self.assertEqual(len(self.model.skeleton.bones), 159)
+
+
 class TestSkeletonDecoded(unittest.TestCase):
     """The skeleton only exists inside a binarized model - the source model.cfg it came
     from is not shipped with it - so it is the sole record of the bone hierarchy, and
@@ -1217,6 +1280,9 @@ CORPUS_GUARANTEES = (
                    "declare an end 16 bytes past the file, which is what TRAILING_SLACK exists for"),
     (V53_RIFLE, "TestVersion53Rifle (hk417.p3d) - the same v53 layout surviving LZO compressed "
                 "vertex, normal and index arrays, which the magazine is too small to reach"),
+    (V55_MODEL, "TestVersion55Model (eye_female.p3d) - ODOL v55, what the current AddonBuilder "
+                "writes: two bytes between ModelInfo and the LOD address table instead of one, "
+                "with ModelInfo itself unchanged in length"),
 )
 
 
