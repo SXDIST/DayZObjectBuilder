@@ -33,6 +33,17 @@ class DZOB_OP_import_anm(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
         name = "Translation Keys",
         default = True
     )
+    gear_ik_filepath: bpy.props.StringProperty(
+        name = "Gear IK",
+        description = ("Optional item grip clip to lay over the imported one, "
+                       "e.g. P:/dz/anims/anm/player/ik/gear/<item>.anm. In game the "
+                       "held item's hand comes from that separate file, not from "
+                       "the locomotion clip - paste its path and the viewport shows "
+                       "the same pose the engine draws instead of an open grip hand. "
+                       "Plain text on purpose: a FILE_PATH field would try to open a "
+                       "second file browser on top of this one, which Blender refuses"),
+        default = ""
+    )
 
     @classmethod
     def poll(cls, context):
@@ -85,6 +96,7 @@ class DZOB_PT_import_anm_main(bpy.types.Panel):
         layout.prop(operator, "scale")
         layout.prop(operator, "import_rotation")
         layout.prop(operator, "import_translation")
+        layout.prop(operator, "gear_ik_filepath")
 
 
 class DZOB_OP_export_anm(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
@@ -107,6 +119,15 @@ class DZOB_OP_export_anm(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
             ('V5', "ANIMSET5", "Older format (vanilla player animations)"),
         ),
         default = 'V6'
+    )
+    bone_scope: bpy.props.EnumProperty(
+        name = "Bones",
+        description = "Which bones to write into the clip",
+        items = (
+            ('KEYED', "Keyed Only", "Only bones the action keys - keeps a partial/masked clip partial, so the engine still takes untouched bones from the layer below"),
+            ('ALL', "Whole Armature", "Every bone in the armature, even ones the action never touches"),
+        ),
+        default = 'KEYED'
     )
     use_scene_range: bpy.props.BoolProperty(
         name = "Scene Frame Range",
@@ -175,6 +196,7 @@ class DZOB_PT_export_anm_main(bpy.types.Panel):
         operator = context.space_data.active_operator
 
         layout.prop(operator, "version")
+        layout.prop(operator, "bone_scope")
         layout.prop(operator, "use_scene_range")
         col = layout.column(align=True)
         col.enabled = not operator.use_scene_range

@@ -4,9 +4,15 @@
 # This module only reads; ODOL is never written. Parsed data is converted into the
 # MLOD model by odol_to_mlod.py, so the rest of the add-on sees one representation.
 #
-# Layout follows the publicly documented ODOL structure. DayZ ships version 54,
-# which differs from Arma 3 in ModelInfo field set, material version and an
-# inconsistent hasAnims byte; those differences are handled explicitly below.
+# Layout follows the publicly documented ODOL structure. DayZ ships three versions: the
+# game's own files are version 54, the DayZ Tools binarizer writes 53, which is what
+# almost every mod on disk actually contains (3279 against 70 over a 3356 model survey
+# of an installed mod set), and the current AddonBuilder writes 55. All three differ
+# from Arma 3 in ModelInfo field set, material version and an inconsistent hasAnims
+# byte; those differences are handled explicitly below. Between themselves they differ
+# in the material layout, a tolerated tail on the last LOD, and how many bytes separate
+# ModelInfo from the LOD address table (none, one and two respectively), all documented
+# where they are handled.
 #
 # The ModelInfo layout below was derived by measurement against DayZ v54 models,
 # because the published documentation covers the Arma 3 field set only. Rather
@@ -28,7 +34,15 @@ class ODOL_Error(Exception):
 
 
 SIGNATURE = b"ODOL"
-VERSION = 54
+SUPPORTED_VERSIONS = (53, 54, 55)
+
+# The LOD stored last in the file may declare an end address this far past both the end
+# of the file and the end of its own rest data. Measured over 657 v53 models: 198 of them
+# do it, always on the LOD with the highest start address, and always by exactly 16 bytes.
+# Nothing the importer reads lives in that range, so it is tolerated rather than treated
+# as a truncated file. Every other LOD is still held to the exact bounds, which is what
+# keeps the rest data checksum a checksum.
+TRAILING_SLACK = 16
 
 # Animation types that carry no bone axis data in the anims-to-bones mapping.
 ANIM_HIDE = 9
@@ -78,7 +92,19 @@ def find_odol_offset(file):
 #   frequent              bool         unknown               uint32
 #
 # The three DayZ additions total five bytes over the Arma 3 field set.
-def skip_model_info(file, version, file_size):
+#
+# What is kept is what an editable model cannot be rebuilt without: the skeleton, which
+# only exists here once a model has been binarized, and the per point mass array, which
+# is the Geometry LOD's #Mass# tagg folded into the header. Everything else is walked.
+class ODOL_ModelInfo():
+    def __init__(self):
+        self.skeleton = ODOL_Skeleton()
+        self.masses = []
+
+
+def read_model_info(file, version, file_size):
+    output = ODOL_ModelInfo()
+
     file.seek(4 * 6, 1)             # index .. or_hints
     file.seek(4 * 3, 1)             # aiming_center
     file.seek(4 * 3, 1)             # map colours, view_density
@@ -93,10 +119,10 @@ def skip_model_info(file, version, file_size):
     file.seek(4, 1)                 # shadow_offset
     file.seek(1, 1)                 # animated
 
-    bones = read_skeleton(file, version, file_size)
+    output.skeleton = read_skeleton(file, version, file_size)
 
     file.seek(1, 1)                 # map_type
-    skip_compressed_floats(file, file_size)  # per point masses of the geometry LOD
+    output.masses = read_compressed_floats(file, file_size)  # per point, geometry LOD
     file.seek(4 * 4, 1)             # mass, inv_mass, armor, inv_armor
     file.seek(13, 1)                # special_lod_indices
     file.seek(4, 1)                 # min_shadow
@@ -106,7 +132,7 @@ def skip_model_info(file, version, file_size):
     file.seek(1, 1)                 # frequent
     file.seek(4, 1)                 # unknown
 
-    return bones
+    return output
 
 
 # Below version 64 an array is LZO compressed whenever it would occupy at least
@@ -148,14 +174,14 @@ def read_count(file, file_size, label):
     return count
 
 
-def skip_compressed_floats(file, file_size):
+def read_compressed_floats(file, file_size):
     count = read_count(file, file_size, "float array")
     expected = 4 * count
     if expected < COMPRESSION_LIMIT:
-        file.seek(expected, 1)
-        return
+        return list(binary.read_floats(file, count)) if count else []
 
-    compression.lzo1x_decompress(file, expected, LZO_BI_VARIANT)
+    _, output = compression.lzo1x_decompress(file, expected, LZO_BI_VARIANT)
+    return list(struct.unpack("<%df" % count, bytes(output)))
 
 
 # Below version 64, a compressed block carries no size prefix of its own, so a
@@ -210,55 +236,126 @@ def read_condensed_array(file, element_size, file_size, bi_variant = LZO_BI_VARI
 # bone weights of their own in DayZ v54 (see the LOD reader), so the per-vertex
 # skinning has to be joined onto them by matching a selection's name to a bone's, and
 # that join needs this ordered list to turn a vertexBoneRef bone index into a name.
-def read_skeleton(file, version, file_size):
-    bones = []
-    name = binary.read_asciiz(file)
-    if not name:
-        return bones
+# The skeleton a model was binarized against. In an editable .p3d this lives in the
+# model.cfg beside the file, not in the model; binarizing folds it in, so this is the
+# only copy left in a binarized model and the only way to write that model.cfg back out.
+class ODOL_Skeleton():
+    def __init__(self):
+        self.name = ""
+        self.is_discrete = False
+        # Bone names in file order, and the parent name of each. The parent is a name
+        # rather than an index because that is how CfgSkeletons states it, and an empty
+        # parent means the bone is a root.
+        self.bones = []
+        self.parents = []
+        self.pivots = ""
 
-    file.seek(1, 1)                 # is_discrete
+    def __bool__(self):
+        return bool(self.name)
+
+
+def read_skeleton(file, version, file_size):
+    output = ODOL_Skeleton()
+    output.name = binary.read_asciiz(file)
+    if not output.name:
+        return output
+
+    output.is_discrete = binary.read_byte(file) == 1
     count_bones = read_count(file, file_size, "skeleton bone")
     for _ in range(count_bones):
         if file.tell() >= file_size:
             raise ODOL_Error("Skeleton bone list ran past the end of the file")
 
-        bones.append(binary.read_asciiz(file))  # bone name
-        binary.read_asciiz(file)                # parent name
+        output.bones.append(binary.read_asciiz(file))
+        output.parents.append(binary.read_asciiz(file))
 
     if version > 44:
-        binary.read_asciiz(file)    # obsolete pivots name
+        output.pivots = binary.read_asciiz(file)     # obsolete
 
-    return bones
+    return output
+
+
+# One animation class, as CfgModels declares it. The type decides which of the tail
+# fields carry meaning; the rest stay at their defaults.
+class ODOL_Animation():
+    def __init__(self):
+        self.type = 0
+        self.name = ""
+        self.source = ""
+        self.min_value = 0.0
+        self.max_value = 0.0
+        self.min_phase = 0.0
+        self.max_phase = 0.0
+        self.source_address = 0
+        self.hide_value = 0.0
+        # angle0/angle1 for the rotations, offset0/offset1 for the translations.
+        self.value0 = 0.0
+        self.value1 = 0.0
+        # Direct animations carry their axis inline. Every other type carries it per
+        # LOD in the anims-to-bones mapping instead, which is why it is kept there.
+        self.axis_position = (0.0, 0.0, 0.0)
+        self.axis_direction = (0.0, 0.0, 0.0)
+        self.angle = 0.0
+        self.axis_offset = 0.0
+        # Which bone this animation drives, one entry per LOD, -1 where it drives none.
+        # The value indexes the model's skeleton bone list; a model.cfg states that bone
+        # by name as the animation's selection.
+        self.bones = []
+        # The axis each LOD resolved for this animation, as (position, direction), or
+        # None. A model.cfg names an axis instead of stating it numerically, so this is
+        # what a name has to be matched back against.
+        self.axes = []
+
+
+class ODOL_Animations():
+    def __init__(self):
+        self.classes = []
+        # Per LOD, per skeleton bone, the animation indices that drive it. Redundant
+        # with ODOL_Animation.bones and kept only because it is what the file stores.
+        self.bones_to_animations = []
+
+    def __bool__(self):
+        return bool(self.classes)
 
 
 # Animation classes, followed by the bones-to-animations and animations-to-bones
-# mappings. Only lengths matter, the data is not used by the importer.
-def skip_animations(file, count_lods, file_size):
+# mappings.
+#
+# This walk doubles as one of the candidates read_lod_table tries when locating the LOD
+# address table, so it has to keep failing loudly on anything that does not decode: a
+# wrong candidate is told apart from the right one by whether this raises.
+def read_animations(file, count_lods, file_size):
+    output = ODOL_Animations()
+
     count_classes = binary.read_ulong(file)
     if count_classes > 10000:
         raise ODOL_Error("Implausible animation class count: %d" % count_classes)
 
-    types = []
     for _ in range(count_classes):
         if file.tell() >= file_size:
             raise ODOL_Error("Animation class list ran past the end of the file")
 
-        anim_type = binary.read_ulong(file)
-        types.append(anim_type)
+        animation = ODOL_Animation()
+        animation.type = binary.read_ulong(file)
+        animation.name = binary.read_asciiz(file)
+        animation.source = binary.read_asciiz(file)
+        (animation.min_value, animation.max_value,
+         animation.min_phase, animation.max_phase) = binary.read_floats(file, 4)
+        animation.source_address = binary.read_ulong(file)
 
-        binary.read_asciiz(file)    # name
-        binary.read_asciiz(file)    # source
-        file.seek(4 * 4, 1)         # min/max value, min/max phase
-        file.seek(4, 1)             # source address
-
-        if anim_type == ANIM_HIDE:
-            file.seek(4, 1)         # hide value
-        elif anim_type == ANIM_DIRECT:
-            file.seek(4 * 3 * 2 + 4 * 2, 1)  # axis position, direction, angle, offset
-        elif anim_type < ANIM_DIRECT:
-            file.seek(4 * 2, 1)     # rotation angles or translation offsets
+        if animation.type == ANIM_HIDE:
+            animation.hide_value = binary.read_float(file)
+        elif animation.type == ANIM_DIRECT:
+            animation.axis_position = tuple(binary.read_floats(file, 3))
+            animation.axis_direction = tuple(binary.read_floats(file, 3))
+            animation.angle = binary.read_float(file)
+            animation.axis_offset = binary.read_float(file)
+        elif animation.type < ANIM_DIRECT:
+            animation.value0, animation.value1 = binary.read_floats(file, 2)
         else:
-            raise ODOL_Error("Unknown animation type: %d" % anim_type)
+            raise ODOL_Error("Unknown animation type: %d" % animation.type)
+
+        output.classes.append(animation)
 
     # Models that declare the hasAnims byte but carry no animation classes write
     # this count as zero rather than repeating the LOD count.
@@ -268,15 +365,26 @@ def skip_animations(file, count_lods, file_size):
 
     for _ in range(count_bone_lods):
         count_bones = read_count(file, file_size, "animation bone")
+        per_lod = []
         for _ in range(count_bones):
             count_anims = read_count(file, file_size, "bone animation")
-            file.seek(4 * count_anims, 1)
+            per_lod.append(list(binary.read_ulongs(file, count_anims)) if count_anims else [])
+
+        output.bones_to_animations.append(per_lod)
 
     for _ in range(count_bone_lods):
-        for anim_type in types:
+        for animation in output.classes:
             index = binary.read_long(file)
-            if index != -1 and anim_type != ANIM_HIDE:
-                file.seek(4 * 3 * 2, 1)  # axis position and direction
+            animation.bones.append(index)
+
+            if index != -1 and animation.type != ANIM_HIDE:
+                position = tuple(binary.read_floats(file, 3))
+                direction = tuple(binary.read_floats(file, 3))
+                animation.axes.append((position, direction))
+            else:
+                animation.axes.append(None)
+
+    return output
 
 
 def read_table_at(file, position, count_lods, file_size, offset):
@@ -289,12 +397,17 @@ def read_table_at(file, position, count_lods, file_size, offset):
     flags = binary.read_bytes(file, count_lods)
     table_end = file.tell()
 
+    # Only the LOD stored last may overrun, so the slack is granted to that one address
+    # rather than to the file as a whole.
+    last = starts.index(max(starts))
+
     for i in range(count_lods):
         if not table_end <= starts[i] <= file_size:
             raise ODOL_Error("LOD %d start address %d outside [%d, %d]" % (i, starts[i], table_end, file_size))
 
-        if not starts[i] <= ends[i] <= file_size:
-            raise ODOL_Error("LOD %d end address %d not in [%d, %d]" % (i, ends[i], starts[i], file_size))
+        limit = file_size + TRAILING_SLACK if i == last else file_size
+        if not starts[i] <= ends[i] <= limit:
+            raise ODOL_Error("LOD %d end address %d not in [%d, %d]" % (i, ends[i], starts[i], limit))
 
     for i, flag in enumerate(flags):
         if flag not in (0, 1):
@@ -314,27 +427,38 @@ def read_lod_table(file, model, count_lods, file_size):
     #   C: no hasAnims byte, animations directly here
     #   A: hasAnims byte = 0, table immediately after the byte
     #   D: table directly here, no animations at all
+    # Each candidate returns the position the table would start at, and whatever
+    # animation data it had to read to get there. Which candidate wins is what decides
+    # whether the model has animations at all, so the two are settled together.
     def after_flag_and_animations():
         file.seek(base + 1)
-        skip_animations(file, count_lods, file_size)
-        return file.tell()
+        animations = read_animations(file, count_lods, file_size)
+        return file.tell(), animations
 
     def after_animations():
         file.seek(base)
-        skip_animations(file, count_lods, file_size)
-        return file.tell()
+        animations = read_animations(file, count_lods, file_size)
+        return file.tell(), animations
 
     candidates = [
         ("hasAnims byte then animations", after_flag_and_animations),
         ("animations without hasAnims byte", after_animations),
-        ("hasAnims byte, no animations", lambda: base + 1),
-        ("no hasAnims byte, no animations", lambda: base),
+        ("hasAnims byte, no animations", lambda: (base + 1, ODOL_Animations())),
+        ("no hasAnims byte, no animations", lambda: (base, ODOL_Animations())),
+        # v55 puts TWO bytes here where v54 puts one and v53 none. ModelInfo itself is
+        # the same length in all three - v53 pays for its missing geometrySimple byte
+        # with an extra one before propertyClass - so this is the only change v55 needs.
+        # Kept last on purpose: over the 631 ODOL models of the local corpus the four
+        # shapes above still win everywhere they used to (D 567, A 44, B 9, C 9) and
+        # this one is reached by exactly the 2 v55 files, which is what pins it as the
+        # v55 shape rather than a looser fallback that happens to validate.
+        ("no hasAnims byte, table two bytes on", lambda: (base + 2, ODOL_Animations())),
     ]
 
     failures = []
     for label, locate in candidates:
         try:
-            position = locate()
+            position, animations = locate()
             starts, ends, permanent = read_table_at(file, position, count_lods, file_size, model.offset)
         # A wrong candidate can walk skip_animations() straight off the end of a
         # truncated file. IndexError included because compression.lzo1x_decompress
@@ -346,6 +470,7 @@ def read_lod_table(file, model, count_lods, file_size):
         model.lod_starts = starts
         model.lod_ends = ends
         model.permanent = permanent
+        model.animations = animations
         return
 
     raise ODOL_Error("Could not locate the LOD address table after ModelInfo (ends at %d).\n  %s" % (base, "\n  ".join(failures)))
@@ -354,35 +479,119 @@ def read_lod_table(file, model, count_lods, file_size):
 # An EmbeddedMaterial, read inline in the LOD stream. Only the name is kept; the
 # rest exists to be walked past, and walking past it correctly is the whole problem.
 #
-# DayZ writes material version 20, which inserts two fields the Arma 3 layout does
-# not have: 25 floats of extended PBR data after pixel_shader, and one uint32 after
-# fog_mode. That is 104 bytes. Materials are read inline, so getting the width wrong
-# does not fail here, it silently shifts every following field in the LOD.
-#
 #   name              asciiz       version           uint32
 #   emissive .. specular_copy      float[4] x 6
-#   specular_power    float        pixel_shader      uint32
-#   dayz_extended     float[25]  <-- v >= 20 only
-#   vertex_shader, main_light, fog_mode              uint32 x 3
-#   dayz_unknown      uint32     <-- v >= 20 only
-#   surface_file      asciiz       render flags      uint32 x 2
-#   count_stages      uint32       count_tex_gens    uint32
+#   specular_power    float
+#   extended          float[width]               <-- width set by the material version
+#   pixel_shader, vertex_shader, main_light, fog_mode        uint32 x 4
+#   surface_file      asciiz       render flags   uint32 x 2
+#   count_stages      uint32       count_tex_gens uint32
 #   stage textures    StageTexture[count_stages]
 #   stage transforms  (uint32 uv_source + float[12]) x count_tex_gens
 #   stage TI          StageTexture               <-- v >= 10 only
-MATERIAL_VERSION_DAYZ = 20
+#
+# The extended block is the only variable part, and its width follows no rule worth
+# extrapolating: measured 10 floats at material version 15, 14 at 16 and 26 at 20
+# (ODOL v53 writes 15 and 16, v54 writes 20). Guessing it is the expensive kind of
+# wrong, because a material is read inline: a bad width does not fail where it happens,
+# it silently shifts every following field in the LOD.
+#
+# So the width is recovered from the file rather than tabulated. Everything after the
+# block is heavily constrained -- four small enumerated ids, a path or nothing, two
+# bounded counts, then self-describing stage records -- so trying every width and
+# keeping the one that validates decides it, and a material version this module has
+# never seen costs nothing. Measured over 9310 materials drawn from both ODOL versions,
+# exactly one width ever survives. The id bounds are what makes that true: dropped, a
+# third of the same materials admit up to ten widths each.
+MAX_EXTENDED_FLOATS = 48
+
+# Set well clear of the corpus, whose highest values are pixel shader 129, vertex
+# shader 35, main light 3 and fog mode 1.
+MAX_PIXEL_SHADER = 200
+MAX_VERTEX_SHADER = 200
+MAX_MAIN_LIGHT = 8
+MAX_FOG_MODE = 4
+MAX_STAGE_FILTER = 16
+MAX_STAGE_ID = 64
+MAX_MATERIAL_STAGES = 64
+
+# binary.read_asciiz walks a byte at a time until it finds a terminator or the file
+# ends, so on a wrong width it would scan the rest of the model instead of failing.
+# The candidate walk needs a bounded reader, and one that rejects what a path can
+# never be, since that rejection is half of what makes the search decisive.
+MAX_MATERIAL_STRING = 512
+
+# Printable ASCII, and tab. The tab is not a courtesy: procedural texture strings carry
+# a trailing one, as in "#(argb,8,8,3)color(1,1,1,1,co)\t". Rejecting it costs whole
+# LODs, 59 of them over a 1018 model sweep of the game files.
+MATERIAL_STRING_BYTES = frozenset([9]) | frozenset(range(32, 127))
+
+
+def read_material_asciiz(file):
+    position = file.tell()
+    raw = file.read(MAX_MATERIAL_STRING)
+    end = raw.find(b"\x00")
+    if end < 0:
+        raise ODOL_Error("Material string is not terminated within %d bytes" % MAX_MATERIAL_STRING)
+
+    if any(byte not in MATERIAL_STRING_BYTES for byte in raw[:end]):
+        raise ODOL_Error("Material string is not printable ASCII: %r" % raw[:end])
+
+    file.seek(position + end + 1)
+
+    return raw[:end]
 
 
 def read_stage_texture(file):
-    binary.read_ulong(file)         # filter
-    texture = binary.read_asciiz(file)
-    binary.read_ulong(file)         # stage id
-    file.seek(1, 1)                 # use world environment map
+    if binary.read_ulong(file) > MAX_STAGE_FILTER:
+        raise ODOL_Error("Stage texture filter is out of range")
+
+    texture = read_material_asciiz(file)
+
+    if binary.read_ulong(file) > MAX_STAGE_ID:
+        raise ODOL_Error("Stage texture id is out of range")
+
+    if binary.read_byte(file) > 1:
+        raise ODOL_Error("Stage texture world environment flag is not a boolean")
 
     return texture
 
 
-def read_material(file):
+# Everything after the extended block, walked and validated. Returns the position the
+# material ends at, so an accepted candidate does not have to be replayed.
+def read_material_tail(file, version, file_size):
+    pixel, vertex, light, fog = binary.read_ulongs(file, 4)
+    if pixel > MAX_PIXEL_SHADER or vertex > MAX_VERTEX_SHADER or light > MAX_MAIN_LIGHT or fog > MAX_FOG_MODE:
+        raise ODOL_Error("Material ids out of range: pixel %d, vertex %d, light %d, fog %d"
+                         % (pixel, vertex, light, fog))
+
+    # No surface file is normal; one that is present is always a path.
+    surface = read_material_asciiz(file)
+    if surface and not (b"." in surface and b"\\" in surface):
+        raise ODOL_Error("Material surface file is not a path: %r" % surface)
+
+    file.seek(4 * 2, 1)             # render flag count and flags
+
+    count_stages, count_tex_gens = binary.read_ulongs(file, 2)
+    if count_stages > MAX_MATERIAL_STAGES or count_tex_gens > MAX_MATERIAL_STAGES:
+        raise ODOL_Error("Implausible material stage counts: %d stages, %d tex gens" % (count_stages, count_tex_gens))
+
+    for _ in range(count_stages):
+        read_stage_texture(file)
+
+    file.seek(count_tex_gens * (4 + 4 * 12), 1)     # uv source and transform matrix
+
+    if version >= 10:
+        read_stage_texture(file)                    # stage TI
+
+    position = file.tell()
+    if position > file_size:
+        raise ODOL_Error("Material runs past the end of the file")
+
+    return position
+
+
+def read_material(file, file_size):
     name = binary.read_asciiz(file)
     version = binary.read_ulong(file)
 
@@ -394,33 +603,25 @@ def read_material(file):
 
     file.seek(4 * 4 * 6, 1)         # emissive .. specular_copy
     file.seek(4, 1)                 # specular_power
-    file.seek(4, 1)                 # pixel_shader
 
-    if version >= MATERIAL_VERSION_DAYZ:
-        file.seek(4 * 25, 1)        # DayZ extended PBR block
+    base = file.tell()
+    accepted = []
+    for width in range(MAX_EXTENDED_FLOATS + 1):
+        file.seek(base + 4 * width)
+        try:
+            accepted.append(read_material_tail(file, version, file_size))
+        except (ODOL_Error, EOFError, ValueError, struct.error):
+            continue
 
-    file.seek(4 * 3, 1)             # vertex_shader, main_light, fog_mode
+    if not accepted:
+        raise ODOL_Error("No layout fits material %r (version %d), so the stream is desynchronised"
+                         % (name, version))
 
-    if version >= MATERIAL_VERSION_DAYZ:
-        file.seek(4, 1)             # DayZ only
+    if len(accepted) > 1:
+        raise ODOL_Error("Material %r (version %d) fits %d layouts, so the stream is desynchronised"
+                         % (name, version, len(accepted)))
 
-    binary.read_asciiz(file)        # surface file
-    file.seek(4 * 2, 1)             # render flag count and flags
-
-    count_stages = binary.read_ulong(file)
-    count_tex_gens = binary.read_ulong(file)
-    if count_stages > 64 or count_tex_gens > 64:
-        raise ODOL_Error("Implausible material stage counts: %d stages, %d tex gens" % (count_stages, count_tex_gens))
-
-    for _ in range(count_stages):
-        read_stage_texture(file)
-
-    for _ in range(count_tex_gens):
-        binary.read_ulong(file)     # uv source
-        file.seek(4 * 12, 1)        # transform matrix
-
-    if version >= 10:
-        read_stage_texture(file)    # stage TI
+    file.seek(accepted[0])
 
     return name
 
@@ -465,11 +666,21 @@ def read_section(file, offsets, file_size):
     return output
 
 
-def read_uv_set(file, file_size, keep):
+# A keyframe is a float time and a point array. Nothing in the importer uses them - MLOD
+# has no place to put them - but the layout is known, so they are walked rather than
+# treated as a broken LOD. No model in the local corpus carries any; this exists so that
+# one that does still imports its geometry.
+def skip_keyframes(file, file_size):
+    count = read_count(file, file_size, "keyframe")
+    for _ in range(count):
+        binary.read_float(file)                             # time
+        points = read_count(file, file_size, "keyframe point")
+        file.seek(4 * 3 * points, 1)
+
+
+def read_uv_set(file, file_size):
     min_u, min_v, max_u, max_v = binary.read_floats(file, 4)
     raw = read_condensed_array(file, 4, file_size)
-    if not keep:
-        return []
 
     # UVs are quantised to two signed 16 bit values spanning the set's own bounds.
     values = struct.unpack("<%dh" % (len(raw) // 2), raw)
@@ -494,6 +705,10 @@ class ODOL_NamedSelection():
         self.faces = []
         self.vertices = []
         self.weights = []
+        # Set for a selection the engine keeps as a separate drawable run, which is
+        # what a model.cfg names in its sections[] array. Binarizing consumes that
+        # array into this flag, so the flag is the only way back to it.
+        self.is_sectional = False
 
 
 # vertexBoneRef weight byte -> weight float. Measured, NOT assumed: on BDU_Jacket_f.p3d
@@ -509,6 +724,16 @@ WEIGHT_SCALE = 255.0
 # A vertex references at most four bones. Anything above that is a desynchronised stream
 # rather than real skinning, and has to fail the LOD instead of over-reading the block.
 MAX_VERTEX_BONES = 4
+
+
+# The other weight encoding: the non-linear one a named selection's inline weight member
+# uses, which is the same one MLOD selection taggs use (P3D_TAGG_DataSelection). Distinct
+# from the linear vertexBoneRef byte above, and applied to a different array.
+def decode_selection_weight(weight):
+    if weight in (0, 1):
+        return float(weight)
+
+    return (255 - weight) / 254
 
 # vertexBoneRef entry: uint32 weight count, then four (uint8 bone index, uint8 weight)
 # pairs, always 12 bytes whether or not vertexBoneRefIsSimple is set. Measured on both
@@ -583,13 +808,19 @@ class ODOL_LOD():
     def __init__(self):
         self.vertices = []
         self.normals = []
-        self.uvs = []
+        # Every UV set the LOD carries, set 0 first. Kept in full rather than reduced to
+        # the first: 520 of the 2716 LODs in the local corpus carry a second one, and an
+        # MLOD holds each as its own #UVSet# tagg, so dropping them here loses data that
+        # the rest of the add-on is already able to represent.
+        self.uv_sets = []
         self.faces = []
         self.textures = []
         self.materials = []
         self.sections = []
         self.named_selections = []
         self.properties = {}
+        # One per vertex, the same value MLOD stores as a vertex's fourth component.
+        self.vertex_flags = []
         # bbox_min, bbox_max and bbox_center are in the same frame as the vertices,
         # which is what makes them a usable check on the decompressed vertex stream.
         self.bbox_min = (0.0, 0.0, 0.0)
@@ -600,10 +831,26 @@ class ODOL_LOD():
         self.index = -1
         self.resolution = 0.0
 
+    # Set 0 by its old name. Face corners take their UV from it (see convert_face), and
+    # the vertex/UV count check below is stated against it.
+    @property
+    def uvs(self):
+        return self.uv_sets[0] if self.uv_sets else []
+
     @classmethod
-    def read(cls, file, version, end, file_size, bones = ()):
+    def read(cls, file, version, end, file_size, bones = (), slack = 0):
+        # `bones` is the model's skeleton bone name list, indexed by the
+        # subSkeletonsToSkeleton table when the skinning is joined on below.
         output = cls()
 
+        # The proxy table holds a model path and a transform per proxy, and it is skipped
+        # rather than read because it carries nothing the named selections do not. 4.2% of
+        # the proxy selections in a binarized model keep their name but lose their face
+        # (52 of 1228 over the local 633 model corpus), and the obvious idea is to recover
+        # those triangles from this table. Measured 2026-09-09: it cannot be done, because
+        # binarizing drops such a proxy from the table too. The table holds exactly 1176
+        # records against exactly 1176 proxy selections that still have a face, and none
+        # of the 52 empty ones is listed, by index or by path. The triangle is simply gone.
         count_proxies = read_count(file, file_size, "proxy")
         for _ in range(count_proxies):
             binary.read_asciiz(file)    # name
@@ -637,7 +884,7 @@ class ODOL_LOD():
         output.textures = [binary.read_asciiz(file) for _ in range(count_textures)]
 
         count_materials = read_count(file, file_size, "material")
-        output.materials = [read_material(file) for _ in range(count_materials)]
+        output.materials = [read_material(file, file_size) for _ in range(count_materials)]
 
         # Point/vertex cross references, not needed by the importer.
         read_compressed_array(file, 4, read_count(file, file_size, "point to vertex"))
@@ -695,13 +942,32 @@ class ODOL_LOD():
             selection.faces = list(struct.unpack(face_format % count_selected_faces, face_raw)) if count_selected_faces else []
 
             file.seek(4, 1)             # always zero
-            file.seek(1, 1)             # is sectional
+            selection.is_sectional = binary.read_byte(file) == 1
             read_compressed_array(file, 4, read_count(file, file_size, "selected section"))
-            # In DayZ v54 these two arrays are always empty; the skinning lives in
-            # vertexBoneRef and is joined on below. They are still read to advance the
-            # cursor, and honoured if a file ever does carry them inline.
-            read_compressed_array(file, index_size, read_count(file, file_size, "selected vertex"))
-            read_compressed_array(file, 1, read_count(file, file_size, "selection weight"))
+            # The inline vertex member. On a visual LOD it is empty and the skinning
+            # arrives through vertexBoneRef instead, which is what gets joined on below.
+            # A Memory LOD is the opposite case and the reason this is read rather than
+            # walked: its selections have no faces, so these indices are the only record
+            # of which points a named selection holds - the memory points a config
+            # addresses, and the axes a model.cfg names for its animations. Measured on
+            # mp443.p3d, whose Memory LOD carries 23 selections and not one face.
+            count_selected_vertices = read_count(file, file_size, "selected vertex")
+            vertex_raw = read_compressed_array(file, index_size, count_selected_vertices)
+            if len(vertex_raw) < index_size * count_selected_vertices:
+                raise ODOL_Error("Selected vertex array is %d bytes, expected %d"
+                                 % (len(vertex_raw), index_size * count_selected_vertices))
+
+            if count_selected_vertices:
+                selection.vertices = list(struct.unpack(face_format % count_selected_vertices, vertex_raw))
+
+            # One byte of weight per selected vertex, in the non-linear MLOD selection
+            # encoding rather than vertexBoneRef's linear one. An empty array means every
+            # selected vertex is fully bound, which is what a memory point selection is.
+            count_weights = read_count(file, file_size, "selection weight")
+            weight_raw = read_compressed_array(file, 1, count_weights)
+            selection.weights = [decode_selection_weight(byte) for byte in weight_raw[:count_weights]]
+            if len(selection.weights) < len(selection.vertices):
+                selection.weights += [1.0] * (len(selection.vertices) - len(selection.weights))
 
             output.named_selections.append(selection)
 
@@ -710,9 +976,7 @@ class ODOL_LOD():
             key = binary.read_asciiz(file)
             output.properties[key] = binary.read_asciiz(file)
 
-        count_frames = read_count(file, file_size, "keyframe")
-        if count_frames:
-            raise ODOL_Error("Keyframes are not supported (%d present)" % count_frames)
+        skip_keyframes(file, file_size)
 
         file.seek(4 * 3, 1)             # icon colour, colour, special
         file.seek(1, 1)                 # vertex bone reference is simple
@@ -720,19 +984,23 @@ class ODOL_LOD():
         # The checksum described above.
         position = file.tell()
         size_rest = binary.read_ulong(file)
-        if position + size_rest != end:
-            raise ODOL_Error("Rest data at %d is %d bytes, which ends at %d, not at the LOD end %d"
-                             % (position, size_rest, position + size_rest, end))
+        if not end - slack <= position + size_rest <= end:
+            raise ODOL_Error("Rest data at %d is %d bytes, which ends at %d, not in [%d, %d] before the LOD end"
+                             % (position, size_rest, position + size_rest, end - slack, end))
 
-        read_condensed_array(file, 4, file_size)        # clip flags
+        # Per-vertex clip flags. MLOD keeps the same value as the fourth component of a
+        # vertex, and it is not decoration: the bits carry the texture clamp modes and the
+        # lighting mode the engine applies. Dropping them writes every vertex as flag 0,
+        # which Buldozer does not show - it draws the mesh - while the game does.
+        raw_flags = read_condensed_array(file, 4, file_size)
+        output.vertex_flags = list(struct.unpack("<%dI" % (len(raw_flags) // 4), raw_flags)) if raw_flags else []
 
         # The first UV set is always present. The count that follows it is the total
-        # number of sets, so it is one greater than the number still to come; the
-        # importer only keeps the first.
-        output.uvs = read_uv_set(file, file_size, True)
+        # number of sets, so it is one greater than the number still to come.
+        output.uv_sets = [read_uv_set(file, file_size)]
         count_uv_sets = read_count(file, file_size, "UV set")
         for _ in range(max(0, count_uv_sets - 1)):
-            read_uv_set(file, file_size, False)
+            output.uv_sets.append(read_uv_set(file, file_size))
 
         count_vertices = read_count(file, file_size, "vertex")
         raw = read_compressed_array(file, 12, count_vertices)
@@ -758,8 +1026,10 @@ class ODOL_LOD():
         # neighborBoneRef follows, but nothing past the skinning is used and the LOD end
         # address already bounds it, so it is not read.
 
-        if output.vertices and len(output.uvs) != len(output.vertices):
-            raise ODOL_Error("LOD has %d vertices but %d UV pairs" % (len(output.vertices), len(output.uvs)))
+        for index, uvs in enumerate(output.uv_sets):
+            if output.vertices and len(uvs) != len(output.vertices):
+                raise ODOL_Error("LOD has %d vertices but UV set %d has %d pairs"
+                                 % (len(output.vertices), index, len(uvs)))
 
         if output.vertices and len(output.normals) != len(output.vertices):
             raise ODOL_Error("Normal count %d does not match vertex count %d" % (len(output.normals), len(output.vertices)))
@@ -792,13 +1062,23 @@ class ODOL_File():
     def __init__(self):
         self.version = 0
         self.offset = 0
-        self.bones = []
+        # What binarizing folded in from the model.cfg beside the source model, and so
+        # what writing that model.cfg back out has to be rebuilt from.
+        self.skeleton = ODOL_Skeleton()
+        self.animations = ODOL_Animations()
+        self.masses = []
         self.resolutions = []
         self.lod_starts = []
         self.lod_ends = []
         self.permanent = []
         self.lods = []
         self.failed_lods = []
+
+    # Kept as the skeleton's own list under its old name, because a bone index anywhere
+    # in a model - vertexBoneRef, the animation mapping - indexes exactly this.
+    @property
+    def bones(self):
+        return self.skeleton.bones
 
     @classmethod
     def read(cls, file):
@@ -815,8 +1095,9 @@ class ODOL_File():
         except (EOFError, struct.error) as ex:
             raise ODOL_Error("File ends inside the ODOL header: %s" % ex) from ex
 
-        if output.version != VERSION:
-            raise ODOL_Error("Unsupported ODOL version: %d (only %d is supported)" % (output.version, VERSION))
+        if output.version not in SUPPORTED_VERSIONS:
+            raise ODOL_Error("Unsupported ODOL version: %d (only %s are supported)"
+                             % (output.version, " and ".join(str(item) for item in SUPPORTED_VERSIONS)))
 
         try:
             count_lods = read_count(file, file_size, "LOD")
@@ -830,11 +1111,18 @@ class ODOL_File():
         # where the decompressor's file.read(1)[0] raises IndexError, not EOFError.
         # Every failure on malformed input has to leave ODOL_File.read as ODOL_Error.
         try:
-            output.bones = skip_model_info(file, output.version, file_size)
+            model_info = read_model_info(file, output.version, file_size)
         except (IndexError, EOFError, ValueError, struct.error, compression.LZO_Error) as ex:
             raise ODOL_Error("Failed to read past ModelInfo: %s" % ex) from ex
 
+        output.skeleton = model_info.skeleton
+        output.masses = model_info.masses
+
         read_lod_table(file, output, count_lods, file_size)
+
+        # Only the LOD stored last is allowed the trailing tail, matching the address
+        # table's own allowance for it.
+        last = output.lod_starts.index(max(output.lod_starts)) if output.lod_starts else -1
 
         # One unreadable LOD must not cost the ones that can be read: a model whose
         # shadow volume trips the layout is still worth importing for its visuals.
@@ -843,7 +1131,8 @@ class ODOL_File():
         for index, (start, end) in enumerate(zip(output.lod_starts, output.lod_ends)):
             try:
                 file.seek(start)
-                lod = ODOL_LOD.read(file, output.version, end, file_size, output.bones)
+                slack = TRAILING_SLACK if index == last else 0
+                lod = ODOL_LOD.read(file, output.version, end, file_size, output.bones, slack)
                 lod.index = index
                 lod.resolution = output.resolutions[index]
                 output.lods.append(lod)

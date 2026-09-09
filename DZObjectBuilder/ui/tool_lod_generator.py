@@ -2,6 +2,7 @@ import bpy
 
 from ..props.lod_generator import ensure_default_properties
 from ..utilities import lodgen
+from ..utilities import data
 from ..utilities import generic as utils
 
 
@@ -84,25 +85,57 @@ class DZOB_OT_lodgen_generate(bpy.types.Operator):
 
         source = context.active_object
 
-        if scene.dzob_geometry_lod.active:
-            lodgen.generate_geometry_lod(context, source)
+        # Generating from an already generated LOD produces geometry that has nothing to
+        # do with the model. A box built from the memory point cloud comes out three
+        # times the height of the model, because the inview point sits a bounding box
+        # away from it on purpose. Only the visual LODs (and plain meshes that are not
+        # LODs at all) describe the shape the other LODs are derived from.
+        source_props = source.a3ob_properties_object
+        if source_props.is_a3_lod and int(source_props.lod) not in data.lod_visuals:
+            utils.op_report(self, {'WARNING'}, "LODs can only be generated from a resolution LOD or a regular mesh, not from %s" % source.name)
+            return {'CANCELLED'}
 
-        if scene.dzob_memory_lod.active:
-            lodgen.generate_memory_lod(context, source)
+        # The generators duplicate objects and drive operators, so they leave the
+        # selection and the active object pointing at whatever they created last. Without
+        # putting the source back in focus, every step after the first one would work off
+        # the previous step's output, and a second press of the button would generate the
+        # whole set from a generated LOD.
+        selection = [obj for obj in context.selected_objects]
 
-        if scene.dzob_fire_geometry_lod.active:
-            lodgen.generate_fire_geometry_lod(context, source)
+        def focus_source():
+            for obj in context.selected_objects:
+                obj.select_set(False)
 
-        if scene.dzob_view_geometry_lod.active:
-            lodgen.generate_view_geometry_lod(context, source)
+            if source.name not in context.view_layer.objects:
+                return
 
-        if scene.dzob_view_pilot_lod.active:
-            lodgen.generate_view_pilot_lod(context, source)
+            source.select_set(True)
+            context.view_layer.objects.active = source
 
-        if scene.dzob_resolution_lods.active:
-            lodgen.generate_resolution_lods(context, source)
+        steps = (
+            (scene.dzob_geometry_lod, lodgen.generate_geometry_lod),
+            (scene.dzob_memory_lod, lodgen.generate_memory_lod),
+            (scene.dzob_fire_geometry_lod, lodgen.generate_fire_geometry_lod),
+            (scene.dzob_view_geometry_lod, lodgen.generate_view_geometry_lod),
+            (scene.dzob_view_pilot_lod, lodgen.generate_view_pilot_lod),
+            (scene.dzob_resolution_lods, lodgen.generate_resolution_lods)
+        )
+
+        for settings, generate in steps:
+            if not settings.active:
+                continue
+
+            focus_source()
+            generate(context, source)
 
         lodgen.utils.organize_collections(context)
+
+        # Restoring the original selection has to skip anything the collection sorting
+        # moved out of the view layer, since those can no longer be selected.
+        focus_source()
+        for obj in selection:
+            if obj.name in context.view_layer.objects:
+                obj.select_set(True)
 
         return {'FINISHED'}
 

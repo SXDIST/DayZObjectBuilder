@@ -146,10 +146,14 @@ class P3D_TAGG_DataSelection():
     def encode_weight(cls, weight):
         if weight in (0, 1):
             return int(weight)
-            
+
         value = round(255 - 254 * weight)
-            
-        return value
+
+        # Both ends of the byte range are reserved: 0 means the vertex is not part of
+        # the selection at all, and 255 decodes back to a weight of 0. Rounding into
+        # either would turn a vertex that carries a weight into a weightless one, so
+        # the value is clamped to the smallest and largest representable weights.
+        return min(max(value, 1), 254)
     
     @classmethod
     def read(cls, file, count_verts, count_faces):
@@ -160,9 +164,17 @@ class P3D_TAGG_DataSelection():
         
         data_verts = bytearray(file.read(count_verts))
         output.weight_verts = [(i, cls.decode_weight(value)) for i, value in enumerate(data_verts) if value > 0]
-        file.seek(count_faces, 1) # skip face selection data
-        # data_faces = bytearray(file.read(count_faces))
-        # output.weight_faces = [(i, cls.decode_weight(value)) for i, value in enumerate(data_faces) if value > 0]
+
+        # Face membership is read, not skipped. Blender has no use for it - the importer
+        # rebuilds selections from vertices - but write() emits this block unconditionally,
+        # so skipping it here makes every read/write round trip through P3D_MLOD silently
+        # zero it. That is not cosmetic: binarize builds a drawable section from a named
+        # selection's FACES, so a model round tripped this way comes out with every
+        # sectional selection at zero faces, and hiddenSelectionsTextures then has nothing
+        # to paint. Measured on IMPWMOD 15.08.2026 - 505 models lost every selection that
+        # way in a single pass that only meant to drop two LODs.
+        data_faces = bytearray(file.read(count_faces))
+        output.weight_faces = [(i, cls.decode_weight(value)) for i, value in enumerate(data_faces) if value > 0]
 
         return output
     
@@ -466,6 +478,40 @@ class P3D_LOD():
     def read_faces(self, file, count_faces):
         self.faces = [self.read_face(file) for i in range(count_faces)]
 
+    # A face whose corners do not all name distinct vertices has no area, and Blender
+    # cannot hold one. from_pydata builds it and mesh.update() reports a sensible loop
+    # count, but the mesh is malformed: on Blender 5.1.2 the following
+    # mesh.normals_split_custom_set() reads out of bounds and takes the process down
+    # with an access violation, with no Python exception to catch first.
+    #
+    # Hand authored models do contain them - 2406 faces across 9 of the 505 models in
+    # the IMPWMOD source tree, every one a triangle with a repeated corner - so they are
+    # dropped before the mesh is built rather than trusted. Binarized input has never
+    # produced one (none over 2339 ODOL models), which is why this only shows on .p3d
+    # sources.
+    #
+    # Loop normals, UVs, materials and face flags are all derived from this list
+    # afterwards, so dropping here keeps them in step. A selection tagg addresses faces
+    # by index, so those are remapped rather than left pointing at the wrong face.
+    def remove_degenerate_faces(self):
+        keep = [index for index, face in enumerate(self.faces) if len(set(face[0])) == len(face[0])]
+        removed = len(self.faces) - len(keep)
+        if not removed:
+            return 0
+
+        remap = {old: new for new, old in enumerate(keep)}
+        self.faces = [self.faces[index] for index in keep]
+
+        for tagg in self.taggs:
+            if not isinstance(tagg.data, P3D_TAGG_DataSelection):
+                continue
+
+            tagg.data.count_faces = len(self.faces)
+            tagg.data.weight_faces = [(remap[index], weight) for index, weight
+                                      in tagg.data.weight_faces if index in remap]
+
+        return removed
+
     @classmethod
     def read(cls, file):
 
@@ -748,16 +794,17 @@ class P3D_LOD():
 
         return list(groups.keys()), values
     
-    # Change every file path, and selection name to lower case for a uniform output.
+    # Change every file path, and named property to lower case for a uniform output.
+    # Selection names are deliberately left alone: DayZ rigs use PascalCase bone names
+    # (Pelvis, LeftForeArm, ...) and flattening them makes the selections unreadable in
+    # Object Builder, while the engine matches them case insensitively anyway.
     def force_lowercase(self):
         for face in self.faces:
             face[3] = face[3].lower()
             face[4] = face[4].lower()
-        
+
         for tagg in self.taggs:
-            if tagg.is_selection():
-                tagg.name = tagg.name.lower()
-            elif type(tagg.data) is P3D_TAGG_DataProperty:
+            if type(tagg.data) is P3D_TAGG_DataProperty:
                 tagg.data.key = tagg.data.key.lower()
                 tagg.data.value = tagg.data.value.lower()
 

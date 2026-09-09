@@ -291,6 +291,67 @@ def cleanup_normals(operator, obj):
         apply_modifiers(obj)
 
 
+# Blender normalizes skin weights on the fly while it deforms a mesh, so a model can
+# look perfectly fine in the viewport while its weights don't add up to 1, spread over
+# more bones than the engine handles, or sit below what a single byte can encode. The
+# P3D format has no such safety net: whatever is written is what gets used, which is how
+# weights appear to null themselves out after an export. The cleanup runs on the export
+# copy of the object, the scene itself is never touched.
+MAX_BONES_PER_VERTEX = 4
+
+
+# The bone selections have to be told apart from the regular ones (camo, component,
+# proxy, ...), which carry a weight of 1 by definition and must not be renormalized.
+# The armatures deforming the object are the authoritative source, so custom skeletons
+# are covered too, and the known DayZ skeleton fills in when the rig is not linked up.
+def get_bone_names(obj):
+    names = {name.lower() for name in data.dayz_temporary_skeleton}
+
+    for item in [obj, *obj.children]:
+        for mod in item.modifiers:
+            if mod.type != 'ARMATURE' or not mod.object or mod.object.type != 'ARMATURE':
+                continue
+
+            names.update(bone.name.lower() for bone in mod.object.data.bones)
+
+    return names
+
+
+def normalize_weights(obj, bone_names):
+    indices = {group.index for group in obj.vertex_groups if group.name.lower() in bone_names}
+    if not indices:
+        return 0
+
+    count = 0
+    with utils.edit_bmesh(obj) as bm:
+        bm.verts.ensure_lookup_table()
+        deform = bm.verts.layers.deform.verify()
+
+        for vert in bm.verts:
+            weights = [(idx, vert[deform][idx]) for idx in vert[deform].keys() if idx in indices]
+            # Sorting before the cut keeps the bones that actually move the vertex.
+            # The weights are normalized afterwards, so even a vertex left with nothing
+            # but quantization dust ends up fully weighted instead of losing its bones.
+            kept = sorted([item for item in weights if item[1] > 0], key=lambda item: item[1], reverse=True)
+            kept = kept[0:MAX_BONES_PER_VERTEX]
+            total = sum(weight for _, weight in kept)
+            if total <= 0:
+                continue
+
+            if len(kept) == len(weights) and abs(total - 1) < 0.001:
+                continue
+
+            for idx, _ in weights:
+                del vert[deform][idx]
+
+            for idx, weight in kept:
+                vert[deform][idx] = weight / total
+
+            count += 1
+
+    return count
+
+
 def generate_components(operator, obj):
     if not operator.generate_components or int(obj.a3ob_properties_object.lod) not in data.lod_geometries:
         return
@@ -331,24 +392,36 @@ def get_lod_data(operator, context, validator, temp_collection):
         export_objects = context.selected_objects
 
     lod_list = []
+    count_normalized = 0
 
-    for obj in [obj for obj in export_objects if not operator.visible_only or obj.visible_get()]:       
+    for obj in [obj for obj in export_objects if not operator.visible_only or obj.visible_get()]:
         if obj.type != 'MESH' or not obj.a3ob_properties_object.is_a3_lod or obj.parent != None:
             continue
-            
+
         # Some operator polls fail later if an object is in edit mode.
         if not obj.mode == 'OBJECT':
             computils.call_operator_ctx(bpy.ops.object.mode_set, {"active_object": obj}, mode='OBJECT')
-        
+
+        # The bone names have to be collected before the merging, because that applies
+        # (and thereby removes) the armature modifiers the names are read from.
+        bone_names = get_bone_names(obj) if operator.normalize_weights else None
+
         main_obj = duplicate_object(obj, temp_collection)
         is_valid = True
 
         sub_objects, proxy_objects = get_sub_objects(obj, temp_collection)
-        
+
         # Merging of the components has to be done in two steps (1st: sub-objects, 2nd: proxies), because the LOD
         # validation would otherwise get confused by the proxy triangles (eg.: it'd be impossible to validate
         # that a mesh is otherwise contiguous or not).
         merge_sub_objects(operator, main_obj, sub_objects)
+
+        # Has to happen after the merging (so the sub-object weights are covered too),
+        # but before the validation and the proxy merging, so the validator sees the
+        # final weights and the proxy selections stay at their fixed weight of 1.
+        if operator.normalize_weights:
+            count_normalized += normalize_weights(main_obj, bone_names)
+
         is_valid = validate_proxies(operator, proxy_objects)
 
         is_valid_copies = []
@@ -391,7 +464,7 @@ def get_lod_data(operator, context, validator, temp_collection):
         generate_components(operator, main_obj)
         lod_list.append((main_obj, proxy_lookup, is_valid))
 
-    return lod_list
+    return lod_list, count_normalized
 
 
 # Produce the vertex list from the bmesh data.
@@ -683,10 +756,12 @@ def write_file(operator, context, file, temp_collection):
 
     # Gather all exportable LOD objects, duplicate them, merge their components, and validate for LOD type.
     # Produce the final mesh data, proxy lookup table and validity for each LOD.
-    lod_list = get_lod_data(operator, context, validator, temp_collection)
-    
+    lod_list, count_normalized = get_lod_data(operator, context, validator, temp_collection)
+
     logger.step("Preprocessing done in %f sec" % (time.time() - logger.times[0]))
     logger.step("Detected %d LOD objects" % len(lod_list))
+    if operator.normalize_weights:
+        logger.step("Normalized the skin weights of %d vertices" % count_normalized)
 
     mlod = p3d.P3D_MLOD()
     logger.step("File type: MLOD")

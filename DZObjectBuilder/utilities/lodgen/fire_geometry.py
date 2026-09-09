@@ -30,6 +30,11 @@ def generate_fire_geometry_lod(context, obj):
     if decimate_ratio < 1.0:
         decimate = fire_obj.modifiers.new(name='Decimate_Quality', type='DECIMATE')
         decimate.ratio = decimate_ratio
+        _apply_modifiers(context, fire_obj)
+        # Collapse decimation moves vertices off the hull, so the mesh is not convex any
+        # more. Hulling the decimated points again restores convexity at the same vertex
+        # budget the quality setting asked for.
+        _build_convex_hull(fire_obj)
 
     triangulate = fire_obj.modifiers.new(name='Triangulate', type='TRIANGULATE')
     triangulate.min_vertices = 4
@@ -60,22 +65,26 @@ def _apply_modifiers(context, obj):
 
 
 def _build_convex_hull(obj):
+    # bmesh.ops.convex_hull only *adds* the hull faces, it does not remove the topology it
+    # was handed. Hulling the mesh in place leaves every original face whose vertices all
+    # happen to sit on the hull, so the result keeps the model's concavities and is not a
+    # convex volume at all. Feed it a bare point cloud instead: nothing survives that the
+    # hull did not produce.
     bm = bmesh.new()
-    bm.from_mesh(obj.data)
-    result = bmesh.ops.convex_hull(bm, input=bm.verts)
+    for vert in obj.data.vertices:
+        bm.verts.new(vert.co)
+
+    bm.verts.ensure_lookup_table()
+    result = bmesh.ops.convex_hull(bm, input=bm.verts[:], use_existing_faces=False)
+
     # geom_interior and geom_unused can reference the same element more than once;
     # bmesh.ops.delete rejects geom lists with duplicates, so dedupe before deleting.
     del_geom = result.get("geom_interior", []) + result.get("geom_unused", [])
     seen = set()
     del_geom = [g for g in del_geom if id(g) not in seen and not seen.add(id(g))]
-    # Delete interior/unused faces first (handles faces whose verts are all on the hull)
-    faces = [g for g in del_geom if isinstance(g, bmesh.types.BMFace)]
-    if faces:
-        bmesh.ops.delete(bm, geom=faces, context='FACES')
-    # Delete remaining interior/unused verts (cascades to connected edges/faces)
-    verts = [g for g in del_geom if isinstance(g, bmesh.types.BMVert) and g.is_valid]
-    if verts:
-        bmesh.ops.delete(bm, geom=verts, context='VERTS')
+    if del_geom:
+        bmesh.ops.delete(bm, geom=del_geom, context='VERTS')
+
     bm.to_mesh(obj.data)
     bm.free()
     obj.data.update()
