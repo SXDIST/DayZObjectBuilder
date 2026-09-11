@@ -164,10 +164,15 @@ class DZOB_OP_export_anm(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
             return {'FINISHED'}
 
         try:
-            bones, frames = export_anm.export_file(self, context)
+            bones, frames, warnings = export_anm.export_file(self, context)
         except Exception as ex:
             utils.op_report(self, {'ERROR'}, "Failed to export ANM: %s" % ex)
             return {'FINISHED'}
+
+        # The file is already written at this point - these are notes about how
+        # the clip is shaped compared to vanilla, not failures.
+        for warning in warnings:
+            utils.op_report(self, {'WARNING'}, warning)
 
         utils.op_report(self, {'INFO'}, "Exported animation from %d bones (%d frames)" % (bones, frames))
 

@@ -9,6 +9,9 @@ transposition at the same time, and neither guess announces itself: a wrong grip
 matrix produces a preview that looks entirely plausible, and any check built on
 top of it agrees with it. That is what this test exists to break.
 
+It also covers the tools built on that matrix: the engine space solver, aligning
+a held item upright, and lifting a bone channel back out of a vanilla clip.
+
 It is an end to end regression, so it needs Blender and the mounted project drive.
 The reference number comes from the game, not from this add-on: with the vanilla
 water bottle held in the vanilla `p_1hd_erc_idle_low` stance, an in-game probe put
@@ -160,7 +163,7 @@ def measure(root):
 
     constraint = item.constraints[0]
 
-    return {
+    result = {
         "tilt": math.degrees(up.angle(Vector((0, 0, 1)))),
         "up": list(up),
         "origin_offset": (world.to_translation() - grip_head).length,
@@ -168,6 +171,98 @@ def measure(root):
         "constraint_subtarget": constraint.subtarget,
         "inverse_is_identity": constraint.inverse_matrix == constraint.inverse_matrix.Identity(4),
         "item": item.name,
+    }
+
+    result.update(measure_solver())
+    result.update(measure_scene_tools(arm, item, root))
+
+    return result
+
+
+def item_tilt(item):
+    import bpy
+    from mathutils import Vector
+
+    bpy.context.view_layer.update()
+    up = (item.matrix_world.to_3x3() @ Vector((0, 0, 1))).normalized()
+
+    return math.degrees(up.angle(Vector((0, 0, 1))))
+
+
+# Engine space arithmetic, checked against data it produced itself: compose an
+# item out of a known bone and three different hand poses, then see whether the
+# solver reads that bone back out. It also pins the property the whole table
+# exists for - a bone that is perfect in one hand pose is far out in another.
+def measure_solver():
+    from mathutils import Euler, Vector
+
+    from DZObjectBuilder.utilities import grip
+
+    engine_grip = grip.dayz_col_from_rows(grip.GRIP_MATRIX_MEASURED)
+
+    bone = grip.dayz_col_from_rows(Euler((0.3, -0.8, 1.1)).to_matrix())
+    bone.translation = Vector((0.01, -0.02, 0.03))
+
+    hands = []
+    for index, angles in enumerate(((0.1, 0.2, 0.3), (-1.2, 0.4, 2.0), (0.8, -1.5, 0.2))):
+        hand = Euler(angles).to_matrix().to_4x4()
+        hand.translation = Vector((0.2 * index, 1.3, -0.1 * index))
+        hands.append(hand)
+
+    lines = []
+    for hand in hands:
+        for index, row in enumerate(grip.rows_from_dayz_col(grip.compose_item(hand, bone, engine_grip))):
+            lines.append("item%d %.6f %.6f %.6f" % (index, row[0], row[1], row[2]))
+
+        for index, row in enumerate(grip.rows_from_dayz_col(hand)):
+            lines.append("hand%d %.6f %.6f %.6f" % (index, row[0], row[1], row[2]))
+
+    samples, override = grip.parse_probe_samples("\n".join(lines))
+
+    recovered = [grip.bone_from_sample(sample["item"], sample["hand"], engine_grip) for sample in samples]
+    solved = [grip.upright_bone_from_sample(sample["item"], sample["hand"], engine_grip) for sample in samples]
+
+    own, cross = [], []
+    for index, candidate in enumerate(solved):
+        for other, sample in enumerate(samples):
+            tilt = grip.tilt_degrees(grip.compose_item(sample["hand"], candidate, engine_grip))
+            (own if other == index else cross).append(tilt)
+
+    return {
+        "solver_samples": len(samples),
+        "solver_override": override is not None,
+        "solver_recovery_error": max(math.degrees((bone.inverted() @ found).to_quaternion().angle) for found in recovered),
+        "solver_own_tilt": max(own),
+        "solver_cross_tilt": max(cross),
+    }
+
+
+# The two operators that reach into a clip, checked end to end on the scene the
+# grip matrix was validated on.
+def measure_scene_tools(arm, item, root):
+    import bpy
+
+    bpy.ops.dzob.item_grip_align_upright()
+    aligned = item_tilt(item)
+
+    for obj in bpy.context.selected_objects:
+        obj.select_set(False)
+
+    arm.select_set(True)
+    bpy.context.view_layer.objects.active = arm
+
+    action = arm.animation_data.action
+    tracks_before = len(arm.animation_data.nla_tracks)
+    actions_before = len(bpy.data.actions)
+
+    bpy.ops.dzob.item_grip_copy_bone_channel(filepath=os.path.join(root, GEAR_CLIP), bones="RightHand_Dummy")
+
+    return {
+        "tilt_aligned": aligned,
+        "tilt_restored": item_tilt(item),
+        "copy_kept_action": arm.animation_data.action is action,
+        "copy_leaked_tracks": len(arm.animation_data.nla_tracks) - tracks_before,
+        "copy_leaked_actions": len(bpy.data.actions) - actions_before,
     }
 
 
@@ -252,6 +347,43 @@ class TestItemGrip(unittest.TestCase):
         offset = self.measurement()["origin_offset"]
 
         self.assertLess(offset, ORIGIN_TOLERANCE, "item origin is %.6f m off the grip bone" % offset)
+
+    def test_solver_reads_back_the_bone_it_was_given(self):
+        # Pure engine space arithmetic, so this one is exact.
+        result = self.measurement()
+
+        self.assertEqual(result["solver_samples"], 3)
+        self.assertFalse(result["solver_override"])
+        self.assertLess(result["solver_recovery_error"], 1e-4)
+
+    def test_solved_bone_is_upright_on_its_own_sample(self):
+        self.assertLess(self.measurement()["solver_own_tilt"], 1e-4)
+
+    def test_solved_bone_is_not_upright_on_the_others(self):
+        # The reason the operator prints a table instead of a number: the hand
+        # sits in visibly different places, so a bone that is perfect in one
+        # sample is tens of degrees out in another. True of vanilla items too.
+        self.assertGreater(self.measurement()["solver_cross_tilt"], 30.0)
+
+    def test_align_upright_stands_the_item_up(self):
+        tilt = self.measurement()["tilt_aligned"]
+
+        self.assertLess(tilt, 0.01, "item still sits %.4f degrees off vertical after aligning" % tilt)
+
+    def test_copying_the_vanilla_channel_back_restores_the_vanilla_pose(self):
+        # Proves the channel really came out of the file rather than being left
+        # over from the aligned pose, and that the raw numbers went through the
+        # importer instead of straight into the pose bone.
+        result = self.measurement()
+
+        self.assertLess(abs(result["tilt_restored"] - result["tilt"]), 0.01)
+
+    def test_copying_a_channel_leaves_no_debris(self):
+        result = self.measurement()
+
+        self.assertTrue(result["copy_kept_action"], "the action was not restored after the copy")
+        self.assertEqual(result["copy_leaked_tracks"], 0, "an NLA track from the temporary import was left behind")
+        self.assertEqual(result["copy_leaked_actions"], 0, "the temporary action was left behind")
 
     def test_bottle_stands_up_in_the_hand(self):
         result = self.measurement()

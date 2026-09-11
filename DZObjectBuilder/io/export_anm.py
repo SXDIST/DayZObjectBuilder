@@ -6,6 +6,7 @@
 # (x, z, y). data_anm.ANM_Anim.write handles the container and quantisation.
 
 
+from . import anm_shape
 from . import data_anm
 from .import_anm import MTX_FIX
 from ..utilities.logger import ProcessLogger
@@ -138,8 +139,16 @@ def export_file(operator, context):
 
     anim.write_file(operator.filepath, v6=(operator.version == 'V6'))
 
+    warnings = anm_shape.clip_warnings(
+        [bone.name for bone in anim.bones],
+        [bone.name for bone in anim.bones if bone.translations]
+    )
+
     logger.step("Bones: %d, Frames: %d, FPS: %d" % (len(anim.bones), anim.frame_count, anim.fps))
+    for warning in warnings:
+        logger.step("Vanilla shape: %s" % warning)
+
     logger.end_subproc()
     logger.step("ANM export finished")
 
-    return len(anim.bones), anim.frame_count
+    return len(anim.bones), anim.frame_count, warnings

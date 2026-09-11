@@ -37,6 +37,8 @@ if "data" in locals():
         reload(rigging)
     if "grip" in locals():
         reload(grip)
+    if "actions" in locals():
+        reload(actions)
     if "structure" in locals():
         reload(structure)
     if "lodgen" in locals():
@@ -62,5 +64,6 @@ from . import masses
 from . import outliner
 from . import rigging
 from . import grip
+from . import actions
 from . import structure
 from . import lodgen
