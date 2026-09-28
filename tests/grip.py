@@ -72,6 +72,7 @@ def find_blender():
                 continue
 
             patterns.append(os.path.join(drive, "Program Files", "Blender Foundation", "*", "blender.exe"))
+            patterns.append(os.path.join(drive, "Program Files (x86)", "Steam", "steamapps", "common", "Blender", "blender.exe"))
             patterns.append(os.path.join(drive, "Steam*", "steamapps", "common", "Blender", "blender.exe"))
             patterns.append(os.path.join(drive, "*", "steamapps", "common", "Blender", "blender.exe"))
     else:
