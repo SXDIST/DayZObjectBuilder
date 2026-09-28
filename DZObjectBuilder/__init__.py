@@ -2,7 +2,7 @@ bl_info = {
     "name": "DayZ Object Builder",
     "description": "Collection of tools for editing DayZ content",
     "author": "SXDIST (DZOB fork), MrClock (Arma 3 Object Builder add-on), Hans-Joerg \"Alwarren\" Frieden (original ArmaToolbox add-on)",
-    "version": (5, 0, 0),
+    "version": (5, 1, 0),
     "blender": (4, 4, 0),
     "location": "Object Builder panels",
     "warning": "Development",
