@@ -6,10 +6,15 @@ DayZ Object Builder (DZOB) is a free add-on for Blender to help content developm
 
 - P3D import-export
 - Binarized (ODOL) P3D import
+- XOB import (Enfusion models: armature, mesh, skin weights, UVs and materials)
+- ANM import-export (Enfusion animations), with an item's gear IK clip optionally laid over on import
 - ASC import-export
 - PAA import
 - skeleton import-export (model.cfg)
 - object list import-export (for Terrain Builder)
+- Auto LODs Generator: Resolution, Geometry, Memory, Fire Geometry and View Geometry LODs in one click
+- bundled DayZ character master rig, added from the `Add` menu
+- item grip tools: attach a held item to the hand with the engine's measured grip matrix, align it upright, solve the grip bone from an in-game probe log, and copy a bone channel out of an `.anm`
 - armature reconstruction
 - texture set auto-search
 - various editing tools
@@ -20,8 +25,11 @@ DayZ Object Builder (DZOB) is a free add-on for Blender to help content developm
 - Windows long path (`MAX_PATH`) support throughout file I/O, for deeply nested unpacked asset trees
 - import/export operators report failures as errors instead of raising unhandled tracebacks
 - texture and RVMAT auto-search over a mod root, matching sets even when the normal map is named differently from the color map
-- binarized (ODOL) P3D import, read directly through the normal P3D import with no external debinarizer; both the version 54 the game files use and the version 53 the DayZ Tools binarizer writes are read. Conversion is lossy and one way, the add-on never writes ODOL, and a re-exported model is degraded relative to the original source
-- whole-mod debinarization outside Blender (`tools/debinarize_mod.py`), which also rebuilds the `model.cfg` each output folder needs: skeleton and bone hierarchy, `sections[]`, and the animation classes with their selections and axes
+- binarized (ODOL) P3D import, read directly through the normal P3D import with no external debinarizer; all three versions DayZ uses are read: 54, which the game files use, 53, which the DayZ Tools binarizer writes, and 55, which the current AddonBuilder writes. Every UV set is kept. Conversion is lossy and one way, the add-on never writes ODOL, and a re-exported model is degraded relative to the original source
+- whole-mod debinarization outside Blender (`tools/debinarize_mod.py`), which also rebuilds the `model.cfg` each output folder needs: skeleton and bone hierarchy, `sections[]`, and the animation classes with their selections and axes; plus bulk LOD generation for a whole mod (`tools/generate_lods.py`, `tools/generate_lods_batch.py`)
+- P3D export keeps the case of selection names and normalizes skin weights; import restores PascalCase for known DayZ skeleton selections
+- `.anm` export writes only the bones the action keys by default, and reports where a clip is shaped differently from vanilla clips
+- the grip matrix for a held item is a value measured in a running game, not derived, and can be updated from a fresh probe reading in the preferences
 
 ## Documentation
 
