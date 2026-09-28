@@ -24,10 +24,15 @@ Two kinds, split by whether they need Blender:
 python tests/odol.py         # ODOL binary layout
 python tests/compression.py  # LZO / LZSS decompression
 python tests/texsearch.py    # texture + RVMAT auto-search
+python tests/anm_shape.py    # export warnings about the vanilla .anm clip shape
 
 # Suites that drive the operators — need Blender with the add-on installed and enabled.
 blender -b -noaudio --python tests/p3d.py
 blender -b -noaudio --python tests/mcfg.py
+
+# End to end grip regression. Plain Python on the outside: it finds Blender itself
+# (DZOB_BLENDER overrides) and re-runs itself inside it with this checkout's add-on.
+python tests/grip.py
 ```
 
 Run a single test case with the usual unittest argument, e.g. `python tests/odol.py TestClass.test_name`.
@@ -41,6 +46,12 @@ go through `load_io(...)`; `tests/texsearch.py` does the same trick for `utiliti
 of the file (`P:\DZ\...`). **Those are Bohemia's game files and must never be committed to this GPL-3
 repository.** Without a local corpus the affected tests skip and the run prints a loud banner listing
 exactly which guarantees went unverified — a green run with that banner is *not* a verified run.
+
+`tests/grip.py` pins the item grip matrix against a number measured in the game: the vanilla water
+bottle held in `p_1hd_erc_idle_low` stands 14.2 degrees off vertical. It needs the vanilla files under
+`P:\` (or `DZOB_PROJECT_ROOT`) and skips without them or without Blender — again, a skipped run is not a
+verified one. The grip matrix itself is measured, never derived; see the header of
+`DZObjectBuilder/utilities/grip.py` before touching the conversion.
 
 `requirements.txt` pins `fake-bpy-module` only, for editor completion and static checking. It is not
 needed to run anything.
