@@ -33,6 +33,7 @@ class ProxyLivePreviewSettings:
     proxy_action = 'NOTHING'
     first_lod_only = True
     translate_selections = False
+    pascalcase_selections = False
     cleanup_empty_selections = False
     sections = 'PRESERVE'
     absolute_paths = True
@@ -61,7 +62,14 @@ def is_transform_only_update(depsgraph):
     if len(updates) == 0:
         return False
 
+    moved = 0
+
     for update in updates:
+        # A drag always retags the scene alongside the object, and that alone must not
+        # disqualify the fast path.
+        if isinstance(update.id, (bpy.types.Scene, bpy.types.ViewLayer)):
+            continue
+
         if not isinstance(update.id, bpy.types.Object):
             return False
 
@@ -74,31 +82,32 @@ def is_transform_only_update(depsgraph):
         if getattr(update, "is_updated_shading", False):
             return False
 
-    return True
+        moved += 1
+
+    return moved > 0
 
 
-def sync_missing_previews_from_updates(context, depsgraph):
-    if proxy_preview_syncing or not context or not context.scene:
-        return
+def as_original(id_block):
+    # Depsgraph updates hand out evaluated copies. A custom property written on a copy is
+    # thrown away, and a copy never compares equal to the datablock a constraint points at,
+    # so every preview lookup missed and a fresh p3d got imported. Work on originals only.
+    if id_block is None:
+        return None
 
-    if not hasattr(context.scene, "a3ob_proxies") or not context.scene.a3ob_proxies.live_preview:
-        return
+    original = getattr(id_block, "original", None)
 
-    for update in depsgraph.updates:
-        obj = update.id
-        if not isinstance(obj, bpy.types.Object):
-            continue
+    return original if original is not None else id_block
 
-        if obj.type != 'MESH' or not obj.a3ob_properties_object_proxy.is_a3_proxy:
-            continue
 
-        if get_preview_for_owner(obj) or not is_valid_proxy_path(obj):
-            continue
-
-        sync_live_preview_for_owner(context, obj)
+def set_prop(obj, name, value):
+    # Writing a custom property retags the object and makes the handler fire again, so only
+    # write when the value actually changes.
+    if obj.get(name) != value:
+        obj[name] = value
 
 
 def ensure_proxy_preview_key(obj):
+    obj = as_original(obj)
     key = obj.get(proxy_owner_key_prop)
 
     if not key:
@@ -108,27 +117,31 @@ def ensure_proxy_preview_key(obj):
     return key
 
 
+def link_preview_to_owner(preview, owner):
+    key = ensure_proxy_preview_key(owner)
+    set_prop(preview, proxy_preview_owner_prop, owner.name)
+    set_prop(preview, proxy_preview_owner_key_prop, key)
+    set_prop(owner, proxy_preview_object_prop, preview.name)
+
+
 def find_proxy_owner(preview):
+    preview = as_original(preview)
+
     for name in ("DZOB Live Proxy Location", "DZOB Live Proxy Rotation"):
         constraint = preview.constraints.get(name)
         if not constraint or not constraint.target:
             continue
 
-        owner = constraint.target
+        owner = as_original(constraint.target)
         if owner.a3ob_properties_object_proxy.is_a3_proxy:
-            ensure_proxy_preview_key(owner)
-            preview[proxy_preview_owner_prop] = owner.name
-            preview[proxy_preview_owner_key_prop] = owner.get(proxy_owner_key_prop)
-            owner[proxy_preview_object_prop] = preview.name
+            link_preview_to_owner(preview, owner)
             return owner
 
     owner_name = preview.get(proxy_preview_owner_prop)
-    owner = bpy.data.objects.get(owner_name)
+    owner = bpy.data.objects.get(owner_name) if owner_name else None
 
     if owner and owner.a3ob_properties_object_proxy.is_a3_proxy:
-        ensure_proxy_preview_key(owner)
-        preview[proxy_preview_owner_key_prop] = owner.get(proxy_owner_key_prop)
-        owner[proxy_preview_object_prop] = preview.name
+        link_preview_to_owner(preview, owner)
         return owner
 
     return None
@@ -138,39 +151,43 @@ def preview_targets_owner(preview, owner):
     if not preview or not preview.get(legacy_proxy_preview_prop):
         return False
 
+    owner = as_original(owner)
+
     for name in ("DZOB Live Proxy Location", "DZOB Live Proxy Rotation"):
         constraint = preview.constraints.get(name)
-        if constraint and constraint.target == owner:
+        if constraint and as_original(constraint.target) == owner:
             return True
 
     return False
 
 
 def get_preview_for_owner(owner):
+    owner = as_original(owner)
     preview_name = owner.get(proxy_preview_object_prop)
-    preview = bpy.data.objects.get(preview_name)
+    # An object that never had a preview carries no name at all, and bpy.data.objects.get
+    # raises on None rather than returning it. Reached through the depsgraph handler, so
+    # it fires on every scene update: headless it buries the console in tracebacks.
+    preview = bpy.data.objects.get(preview_name) if preview_name else None
 
     if preview_targets_owner(preview, owner):
         return preview
+
+    owner_key = ensure_proxy_preview_key(owner)
+    collection = bpy.data.collections.get(proxy_preview_collection)
+
+    # The stored name goes stale whenever the preview is renamed, so fall back to the
+    # constraints, which are what actually tie a preview to its proxy.
+    for obj in (collection.objects if collection else ()):
+        if preview_targets_owner(obj, owner):
+            set_prop(owner, proxy_preview_object_prop, obj.name)
+            set_prop(obj, proxy_preview_owner_key_prop, owner_key)
+            return obj
 
     if preview_name:
         try:
             del owner[proxy_preview_object_prop]
         except Exception:
             pass
-
-    owner_key = ensure_proxy_preview_key(owner)
-    collection = bpy.data.collections.get(proxy_preview_collection)
-    if not collection:
-        return None
-
-    for obj in collection.objects:
-        if obj.get(legacy_proxy_preview_prop) and obj.get(proxy_preview_owner_key_prop) == owner_key and preview_targets_owner(obj, owner):
-            owner[proxy_preview_object_prop] = obj.name
-            return obj
-
-    if owner_key:
-        owner[proxy_owner_key_prop] = uuid.uuid4().hex
 
     return None
 
@@ -193,6 +210,7 @@ def get_preview_collection(context):
 
 
 def remove_preview_object(obj):
+    obj = as_original(obj)
     mesh = obj.data if obj.type == 'MESH' else None
     material_names = [material.name for material in mesh.materials if material] if mesh else []
 
@@ -208,23 +226,23 @@ def remove_preview_object(obj):
 
 
 def ensure_preview_constraints(preview, proxy_object):
-    constraint = preview.constraints.get("DZOB Live Proxy Location")
-    if constraint is None:
-        constraint = preview.constraints.new(type='COPY_LOCATION')
-        constraint.name = "DZOB Live Proxy Location"
+    preview = as_original(preview)
+    proxy_object = as_original(proxy_object)
 
-    constraint.target = proxy_object
-    constraint.owner_space = 'WORLD'
-    constraint.target_space = 'WORLD'
+    for name, constraint_type in (("DZOB Live Proxy Location", 'COPY_LOCATION'), ("DZOB Live Proxy Rotation", 'COPY_ROTATION')):
+        constraint = preview.constraints.get(name)
+        if constraint is None:
+            constraint = preview.constraints.new(type=constraint_type)
+            constraint.name = name
 
-    constraint = preview.constraints.get("DZOB Live Proxy Rotation")
-    if constraint is None:
-        constraint = preview.constraints.new(type='COPY_ROTATION')
-        constraint.name = "DZOB Live Proxy Rotation"
+        if as_original(constraint.target) != proxy_object:
+            constraint.target = proxy_object
 
-    constraint.target = proxy_object
-    constraint.owner_space = 'WORLD'
-    constraint.target_space = 'WORLD'
+        if constraint.owner_space != 'WORLD':
+            constraint.owner_space = 'WORLD'
+
+        if constraint.target_space != 'WORLD':
+            constraint.target_space = 'WORLD'
 
 
 def clear_legacy_preview_objects():
@@ -259,11 +277,22 @@ def clear_live_previews():
 def sync_live_preview(context, preview, owner):
     global proxy_preview_syncing
 
+    preview = as_original(preview)
+    owner = as_original(owner)
     current_path = utils.abspath(owner.a3ob_properties_object_proxy.proxy_path)
 
-    preview.hide_set(owner.hide_get())
-    preview.hide_viewport = owner.hide_viewport
-    preview.scale = mathutils.Vector((1, 1, 1))
+    try:
+        if preview.hide_get() != owner.hide_get():
+            preview.hide_set(owner.hide_get())
+    except RuntimeError:
+        pass
+
+    if preview.hide_viewport != owner.hide_viewport:
+        preview.hide_viewport = owner.hide_viewport
+
+    if tuple(preview.scale) != (1.0, 1.0, 1.0):
+        preview.scale = mathutils.Vector((1, 1, 1))
+
     ensure_preview_constraints(preview, owner)
 
     if preview.get(proxy_preview_path_prop) == current_path:
@@ -288,6 +317,7 @@ def sync_live_preview_for_owner(context, owner):
     if not hasattr(context.scene, "a3ob_proxies"):
         return
 
+    owner = as_original(owner)
     preview = get_preview_for_owner(owner)
 
     if preview:
@@ -301,6 +331,7 @@ def sync_live_preview_for_owner(context, owner):
 
 
 def cleanup_live_preview_for_preview(preview):
+    preview = as_original(preview)
     owner = find_proxy_owner(preview)
 
     if owner and owner.a3ob_properties_object_proxy.is_a3_proxy:
@@ -321,18 +352,20 @@ def remove_empty_preview_collection():
 
 @persistent
 def depsgraph_update_post_handler(scene, depsgraph):
-    if is_transform_only_update(depsgraph):
-        sync_missing_previews_from_updates(bpy.context, depsgraph)
+    if proxy_preview_syncing:
         return
 
-    if proxy_preview_syncing:
+    # Moving a proxy needs no work at all: the copy location/rotation constraints already
+    # drag the preview along. Importing here would mean one p3d read per mouse move.
+    if is_transform_only_update(depsgraph):
         return
 
     context = bpy.context
     for update in depsgraph.updates:
-        obj = update.id
-        if not isinstance(obj, bpy.types.Object):
+        if not isinstance(update.id, bpy.types.Object):
             continue
+
+        obj = as_original(update.id)
 
         if obj.get(legacy_proxy_preview_prop):
             owner = cleanup_live_preview_for_preview(obj)
@@ -610,6 +643,7 @@ class DZOB_OT_proxy_extract(bpy.types.Operator):
     proxy_action: bpy.props.EnumProperty(items=(('SEPARATE', "", ""),), default='SEPARATE')
     first_lod_only: bpy.props.BoolProperty(default=True)
     translate_selections: bpy.props.BoolProperty()
+    pascalcase_selections: bpy.props.BoolProperty()
     cleanup_empty_selections: bpy.props.BoolProperty()
     sections: bpy.props.EnumProperty(items=(("PRESERVE", "", ""),), default="PRESERVE")
     absolute_paths: bpy.props.BoolProperty(default=True)

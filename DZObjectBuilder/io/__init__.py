@@ -17,6 +17,8 @@ if "binary_handler" in locals():
         reload(data_xob)
     if "data_anm" in locals():
         reload(data_anm)
+    if "anm_shape" in locals():
+        reload(anm_shape)
     if "data_tbcsv" in locals():
         reload(data_tbcsv)
     if "data_paa" in locals():
@@ -59,6 +61,7 @@ from . import data_p3d
 from . import data_p3d_odol
 from . import data_xob
 from . import data_anm
+from . import anm_shape
 from . import data_tbcsv
 from . import data_paa
 from . import export_asc

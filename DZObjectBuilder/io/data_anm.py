@@ -98,7 +98,7 @@ def _q(value, bias, mult):
 
 
 class ANM_Bone:
-    __slots__ = ("name", "translations", "rotations", "scales", "additive")
+    __slots__ = ("name", "translations", "rotations", "scales", "additive", "flags")
 
     def __init__(self, name):
         self.name = name
@@ -106,6 +106,11 @@ class ANM_Bone:
         self.rotations = {}      # frame -> (x, y, z, w)
         self.scales = {}         # frame -> (x, y, z)
         self.additive = False
+        # Raw per-bone flags word as stored in the file. Vanilla clips use
+        # values other than 1 (2 is common), and their meaning is not fully
+        # known, so it is kept verbatim and written back unchanged rather than
+        # being collapsed to the `additive` boolean. Zero means "derive it".
+        self.flags = 0
 
 
 class ANM_Anim:
@@ -114,6 +119,7 @@ class ANM_Anim:
         self.frame_count = 0
         self.bones = []
         self.events = []         # (frame, name, user_string, user_int)
+        self.is_v6 = True        # ANIMSET6 (new) vs ANIMSET5 (legacy); see read()
 
     @classmethod
     def read_file(cls, filepath, scale=1.0):
@@ -170,9 +176,11 @@ class ANM_Anim:
 
         anim = cls()
         anim.fps = fps
+        anim.is_v6 = v6
         max_frame = 0
         for m in meta:
             bone = ANM_Bone(m["name"])
+            bone.flags = m["flags"]
             bone.additive = m["flags"] > 0
 
             frames = [r.u16() for _ in range(m["tfc"])]
@@ -236,7 +244,7 @@ class ANM_Anim:
 
             nframes = self.frame_count
             tfc, sfc, rfc = len(tframes), len(sframes), len(rframes)
-            flags = 1 if bone.additive else 0
+            flags = bone.flags if bone.flags else (1 if bone.additive else 0)
 
             if not v6:
                 name = bone.name.encode("ascii", "replace")[:31]

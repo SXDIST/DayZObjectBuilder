@@ -2,7 +2,7 @@ bl_info = {
     "name": "DayZ Object Builder",
     "description": "Collection of tools for editing DayZ content",
     "author": "SXDIST (DZOB fork), MrClock (Arma 3 Object Builder add-on), Hans-Joerg \"Alwarren\" Frieden (original ArmaToolbox add-on)",
-    "version": (5, 0, 0),
+    "version": (5, 1, 0),
     "blender": (4, 4, 0),
     "location": "Object Builder panels",
     "warning": "Development",
@@ -210,6 +210,63 @@ class DZOB_OT_prefs_edit_flag_face(bpy.types.Operator):
         return {'FINISHED'}
 
 
+class DZOB_OT_prefs_grip_matrix_from_log(bpy.types.Operator):
+    """Read the item grip matrix out of a line printed by the in-game probe"""
+
+    bl_idname = "dzob.prefs_grip_matrix_from_log"
+    bl_label = "Update From Log"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    log: bpy.props.StringProperty(
+        name = "Probe Output",
+        description = ("Paste the line the in-game probe printed. Every number in it is read in "
+                       "order: 9 for a right/up/forward basis, or 12 for a full 4x3 transform"),
+        default = ""
+    )
+
+    @classmethod
+    def poll(cls, context):
+        return True
+
+    def invoke(self, context, event):
+        return context.window_manager.invoke_props_dialog(self, width=500)
+
+    def execute(self, context):
+        prefs = context.preferences.addons[__package__].preferences
+
+        try:
+            rows = utilities.grip.parse_grip_log(self.log)
+        except ValueError as ex:
+            self.report({'ERROR'}, "Could not read a grip matrix: %s" % ex)
+            return {'CANCELLED'}
+
+        prefs.grip_matrix = utilities.grip.flat_from_rows(rows)
+
+        self.report({'INFO'}, "Grip matrix updated from the probe output")
+
+        return {'FINISHED'}
+
+
+class DZOB_OT_prefs_grip_matrix_reset(bpy.types.Operator):
+    """Restore the grip matrix that shipped with the add-on"""
+
+    bl_idname = "dzob.prefs_grip_matrix_reset"
+    bl_label = "Reset To Measured"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    @classmethod
+    def poll(cls, context):
+        return True
+
+    def execute(self, context):
+        prefs = context.preferences.addons[__package__].preferences
+        prefs.grip_matrix = utilities.grip.flat_from_rows(utilities.grip.GRIP_MATRIX_MEASURED)
+
+        self.report({'INFO'}, "Grip matrix reset to the shipped measurement")
+
+        return {'FINISHED'}
+
+
 class DZOB_AT_preferences(bpy.types.AddonPreferences):
     bl_idname = __package__
     
@@ -220,6 +277,7 @@ class DZOB_AT_preferences(bpy.types.AddonPreferences):
             ('GENERAL', "General", "General and misc settings", 'PREFERENCES', 0),
             ('PATHS', "Paths", "File path related settings", 'FILE_TICK', 1),
             ('DEFAULTS', "Defaults", "Default fallback values", 'RECOVER_LAST', 2),
+            ('GRIP', "Item Grip", "Placement of a held item in the character's hand", 'CONSTRAINT_BONE', 3),
             ('DEBUG', "Debug", "Debug options", 'ERROR', 4)
         )
     )
@@ -284,6 +342,27 @@ class DZOB_AT_preferences(bpy.types.AddonPreferences):
         default = "00000000",
         get = lambda self: "%08x" % self.flag_face
     )
+    # Item grip
+    grip_matrix: bpy.props.FloatVectorProperty(
+        name = "Grip Matrix",
+        description = ("Orientation of a held item relative to the RightHand_Dummy bone, as the "
+                       "engine applies it. Rows are the item's right, up and forward axes in "
+                       "DayZ's own convention"),
+        size = 9,
+        default = utilities.grip.flat_from_rows(utilities.grip.GRIP_MATRIX_MEASURED)
+    )
+    grip_right_display: bpy.props.StringProperty(
+        name = "Right",
+        get = lambda self: "%.6f, %.6f, %.6f" % tuple(self.grip_matrix[0:3])
+    )
+    grip_up_display: bpy.props.StringProperty(
+        name = "Up",
+        get = lambda self: "%.6f, %.6f, %.6f" % tuple(self.grip_matrix[3:6])
+    )
+    grip_forward_display: bpy.props.StringProperty(
+        name = "Forward",
+        get = lambda self: "%.6f, %.6f, %.6f" % tuple(self.grip_matrix[6:9])
+    )
     # Debug
     preserve_faulty_output: bpy.props.BoolProperty(
         name = "Preserve Faulty Output",
@@ -328,6 +407,26 @@ class DZOB_AT_preferences(bpy.types.AddonPreferences):
             row_face.prop(self, "flag_face_display")
             row_face.operator("dzob.prefs_edit_flag_face", text="", icon='GREASEPENCIL')
         
+        elif self.tabs == 'GRIP':
+            col_matrix = box.column(align=True)
+            col_matrix.enabled = False
+            col_matrix.prop(self, "grip_right_display")
+            col_matrix.prop(self, "grip_up_display")
+            col_matrix.prop(self, "grip_forward_display")
+
+            row_edit = box.row(align=True)
+            row_edit.operator("dzob.prefs_grip_matrix_from_log", icon='GREASEPENCIL')
+            row_edit.operator("dzob.prefs_grip_matrix_reset", icon='LOOP_BACK')
+
+            col_note = box.column(align=True)
+            col_note.use_property_split = False
+            col_note.label(text="Measured in a running game, not derived.", icon='INFO')
+            col_note.label(text="DayZ draws a held item at RightHand_Dummy * this matrix.")
+            col_note.label(text="Deriving it means guessing an axis convention and a")
+            col_note.label(text="transposition at once, and a wrong guess still looks")
+            col_note.label(text="plausible in the viewport. Replace it only with another")
+            col_note.label(text="measurement.")
+
         elif self.tabs == 'DEBUG':
             box.prop(self, "preserve_faulty_output")
             box.prop(self, "preserve_preprocessed_lods")
@@ -337,6 +436,8 @@ classes = (
     DZOB_OT_prefs_find_dayz_tools,
     DZOB_OT_prefs_edit_flag_vertex,
     DZOB_OT_prefs_edit_flag_face,
+    DZOB_OT_prefs_grip_matrix_from_log,
+    DZOB_OT_prefs_grip_matrix_reset,
     DZOB_AT_preferences
 )
 
@@ -368,7 +469,8 @@ modules = (
     ui.tool_rigging,
     ui.tool_utilities,
     ui.tool_scripts,
-    ui.tool_character_rig
+    ui.tool_character_rig,
+    ui.tool_item_grip
 )
 
 

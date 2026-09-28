@@ -3,6 +3,7 @@ import bpy
 from .. import get_icon
 from ..utilities import structure as structutils
 from ..utilities import data
+from ..utilities import dayz_naming
 
 
 class DZOB_OT_check_convexity(bpy.types.Operator):
@@ -206,6 +207,75 @@ class DZOB_OT_translate_vertex_groups(bpy.types.Operator):
             group.name = data.translations_czech_english.get(group.name.lower(), group.name)
         
         return {'FINISHED'}
+
+
+# Plain mixin instead of an Operator subclass, so it never ends up registered itself.
+# The all_selected property still has to be redeclared on every subclass, since inherited
+# bpy props are not picked up reliably in the older API versions the add-on supports.
+class DZOB_OT_vertex_groups_case_base():
+    bl_options = {'REGISTER', 'UNDO'}
+
+    @classmethod
+    def poll(cls, context):
+        obj = context.active_object
+        return obj and obj.type == 'MESH' and len(obj.vertex_groups) > 0
+
+    # Implemented by the subclasses.
+    def convert(self, name):
+        return name
+
+    def execute(self, context):
+        obj_active = context.active_object
+
+        objects = [obj_active]
+        if self.all_selected:
+            objects = [obj for obj in context.selected_objects if obj.type == 'MESH']
+            if obj_active not in objects:
+                objects.append(obj_active)
+
+        renamed = 0
+        for obj in objects:
+            renamed += structutils.rename_vertex_groups(obj, self.convert)
+
+        if renamed > 0:
+            self.report({'INFO'}, "Renamed %d vertex group(s) in %d object(s)" % (renamed, len(objects)))
+        else:
+            self.report({'INFO'}, "No vertex groups needed renaming")
+
+        return {'FINISHED'}
+
+
+class DZOB_OT_vertex_groups_lowercase(DZOB_OT_vertex_groups_case_base, bpy.types.Operator):
+    """Turn every vertex group name to lowercase (eg.: RightLegRoll -> rightlegroll)"""
+
+    bl_label = "Names To Lowercase"
+    bl_idname = "dzob.vertex_groups_lowercase"
+
+    all_selected: bpy.props.BoolProperty(
+        name = "All Selected Objects",
+        description = "Apply to every selected mesh object instead of only the active one",
+        default = True
+    )
+
+    def convert(self, name):
+        return name.lower()
+
+
+class DZOB_OT_vertex_groups_pascalcase(DZOB_OT_vertex_groups_case_base, bpy.types.Operator):
+    """Turn known DayZ bone names to their canonical PascalCase form (eg.: rightlegroll -> RightLegRoll).
+Names that are not part of the DayZ skeleton are left unchanged"""
+
+    bl_label = "Names To PascalCase"
+    bl_idname = "dzob.vertex_groups_pascalcase"
+
+    all_selected: bpy.props.BoolProperty(
+        name = "All Selected Objects",
+        description = "Apply to every selected mesh object instead of only the active one",
+        default = True
+    )
+
+    def convert(self, name):
+        return dayz_naming.to_pascal_case(name)
 
 
 class DZOB_OT_redefine_vertex_group(bpy.types.Operator):
@@ -454,6 +524,9 @@ class DZOB_MT_vertex_groups(bpy.types.Menu):
         layout.operator("dzob.vertex_group_redefine", icon='FILE_REFRESH')
         layout.operator("dzob.vertex_groups_translate", icon='SYNTAX_OFF')
         layout.separator()
+        layout.operator("dzob.vertex_groups_lowercase", icon='SORTALPHA')
+        layout.operator("dzob.vertex_groups_pascalcase", icon='SORTALPHA')
+        layout.separator()
         layout.operator("dzob.vertex_groups_cleanup", icon='TRASH')
 
 
@@ -483,6 +556,8 @@ classes = (
     DZOB_OT_recalculate_normals,
     DZOB_OT_cleanup_vertex_groups,
     DZOB_OT_translate_vertex_groups,
+    DZOB_OT_vertex_groups_lowercase,
+    DZOB_OT_vertex_groups_pascalcase,
     DZOB_OT_redefine_vertex_group,
     DZOB_UL_common_data_base,
     DZOB_UL_common_data_materials,
