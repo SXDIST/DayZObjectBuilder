@@ -21,6 +21,7 @@ def generate_fire_geometry_lod(context, obj):
     for child in list(fire_obj.children):
         bpy.data.objects.remove(child, do_unlink=True)
     fire_obj.modifiers.clear()
+    utils.clear_selections(fire_obj)
 
     # Build convex hull via bmesh API - no context/mode dependency
     _build_convex_hull(fire_obj)

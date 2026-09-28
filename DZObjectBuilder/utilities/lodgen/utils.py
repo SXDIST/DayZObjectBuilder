@@ -69,6 +69,14 @@ def copy_object_transform(source_obj, target_obj):
         target_obj.constraints.copy(constraint)
 
 
+def clear_selections(obj):
+    # Geometry LODs carry only the component selections that find_components creates.
+    # Anything inherited from the source model (camo, proxy or rigging selections)
+    # would survive as empty vertex groups and get exported as bogus selections.
+    for group in list(obj.vertex_groups):
+        obj.vertex_groups.remove(group)
+
+
 def create_bounding_box(context, source_obj, target_obj=None):
     if not source_obj or not source_obj.data:
         return None
