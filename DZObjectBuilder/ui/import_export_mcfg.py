@@ -107,7 +107,7 @@ class DZOB_OP_export_mcfg(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
         skeleton = scene_props.skeletons[self.skeleton_index]
 
         validator = Validator(ProcessLoggerNull())
-        if not validator.validate_skeleton(skeleton, False, True):
+        if not validator.validate_skeleton(skeleton, lazy=True):
             utils.op_report(self, {'ERROR'}, "Invalid skeleton definiton, run skeleton validation for more info")
             return {'FINISHED'}
         
