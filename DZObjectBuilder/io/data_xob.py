@@ -98,6 +98,17 @@ def _decompress(reader, length, mode):
     raise XOB_Error("uncompressed .xob streams are not supported")
 
 
+# Enfusion is left-handed and Y-up, Blender right-handed and Z-up, so the
+# conversion has to be a reflection: swap Y and Z like the .p3d and .anm paths
+# do, and reverse the winding to keep the faces pointing outwards.
+def to_blender_axes(v):
+    return (v[0], v[2], v[1])
+
+
+def to_blender_face(face):
+    return tuple(reversed(face))
+
+
 class XOB_Bone:
     __slots__ = ("name", "pos", "rot", "parent")
 

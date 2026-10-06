@@ -12,10 +12,8 @@ from ..utilities.logger import ProcessLogger
 from ..utilities import dayz_naming
 
 
-# Enfusion is Y-up; convert to Blender Z-up with a proper rotation (no mirroring
-# so face winding and left/right stay intact).
 def _conv(v):
-    return Vector((v[0], -v[2], v[1]))
+    return Vector(data_xob.to_blender_axes(v))
 
 
 def _world_heads(bones):
@@ -85,7 +83,7 @@ def _get_material(name):
 def build_mesh(mesh, bone_names, material_name, name, collection, arm_obj):
     me = bpy.data.meshes.new(name)
     verts = [tuple(_conv(v.pos)) for v in mesh.verts]
-    me.from_pydata(verts, [], [f for f in mesh.faces])
+    me.from_pydata(verts, [], [data_xob.to_blender_face(f) for f in mesh.faces])
     me.update()
 
     obj = bpy.data.objects.new(name, me)
