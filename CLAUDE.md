@@ -25,6 +25,7 @@ python tests/odol.py         # ODOL binary layout
 python tests/compression.py  # LZO / LZSS decompression
 python tests/texsearch.py    # texture + RVMAT auto-search
 python tests/anm_shape.py    # export warnings about the vanilla .anm clip shape
+python tests/xob.py          # .xob axis conversion: handedness, facing, winding (vanilla bodies under P:\)
 
 # Suites that drive the operators — need Blender with the add-on installed and enabled.
 blender -b -noaudio --python tests/p3d.py
