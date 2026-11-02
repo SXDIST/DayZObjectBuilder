@@ -13,10 +13,13 @@
 # corrected measurement below instead checks the raw frame against real-world
 # geometry directly.
 #
-#   Vertices  ODOL v54 stores them in absolute model coordinates (no centre offset:
-#             the vertex cloud fills bbox_min..bbox_max exactly while bbox_center is
-#             not the origin, e.g. drum LOD 0 centre (-0.059, 0.418, 0.0); adding the
-#             centre would shift every vertex off the box). The raw frame is BI's
+#   Vertices  ODOL stores them minus ModelInfo's bounding centre, which is non-zero on a
+#             model with autocenter, so the centre is added back here. A LOD's own
+#             bbox_center is a different thing and is not used: the bbox is stored in the
+#             same centred frame as the vertices, so the cloud filling it says nothing
+#             about the offset, and the drum this was first measured on has autocenter
+#             off and a zero centre. House_1W01.p3d shows it: centre (-0.015, 2.924,
+#             -2.672), LOD 0 Y running -4.99..4.99. The raw frame is BI's
 #             native Y-up - NOT already the in-memory MLOD (Blender Z-up) frame.
 #             Measured on 55galDrum.p3d LOD 0: raw Y extent is 0.836 (a real
 #             55-gallon drum's height) while raw X/Z extents are ~0.6-0.73 (its
@@ -248,11 +251,11 @@ def repair_degenerate_normals(lod):
     return len(suspect)
 
 
-def convert_lod(lod, masses = ()):
+def convert_lod(lod, masses = (), center = (0.0, 0.0, 0.0)):
     output = p3d.P3D_LOD()
     output.resolution = p3d.P3D_LOD_Resolution.from_float(lod.resolution)
 
-    # Vertices absolute, no centre offset; axis swapped (Y/Z) to land in Blender's
+    # Bounding centre added back (see module header); axis swapped (Y/Z) to land in Blender's
     # Z-up frame, matching P3D_LOD.read_vert's swap of the on-disk MLOD frame.
     # Normals get the same axis swap, not negated (see module header).
     # The fourth component is the vertex flag, not padding: it carries the texture clamp
@@ -260,7 +263,8 @@ def convert_lod(lod, masses = ()):
     # array, so it is carried straight over; a model whose flags are zeroed draws
     # correctly in Buldozer and wrong in game.
     flags = lod.vertex_flags
-    output.verts = [(x, z, y, flags[index] if index < len(flags) else 0)
+    center_x, center_y, center_z = center
+    output.verts = [(x + center_x, z + center_z, y + center_y, flags[index] if index < len(flags) else 0)
                     for index, (x, y, z) in enumerate(lod.vertices)]
     output.normals = [(x, z, y) for x, y, z in lod.normals]
 
@@ -328,7 +332,7 @@ def convert(odol_file):
 
     for lod in odol_file.lods:
         try:
-            output.lods.append(convert_lod(lod, odol_file.masses))
+            output.lods.append(convert_lod(lod, odol_file.masses, odol_file.bounding_center))
         except Exception as ex:
             output.failed_lods.append((lod.index, str(ex)))
 
