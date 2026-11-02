@@ -30,8 +30,8 @@ HOUSE = r"P:\DZ\structures_sakhal\residential\houses\House_1W02_Blue.p3d"
 # weights, which is the only file in this set that exercises the weight-byte decode.
 JACKET = r"P:\DZ\characters\tops\BDU_Jacket_f.p3d"
 
-# ODOL v53. Everything above is v54, which is what the game ships; v53 is what the DayZ
-# Tools binarizer writes, and so what almost every mod on disk actually contains. These
+# ODOL v53. Everything above is v56, which is what the game ships since 1.30; v53 is what
+# older DayZ Tools binarizers wrote, and so what almost every mod on disk contains. These
 # two are a third party mod's files rather than Bohemia's, and are equally not to be
 # committed here. The magazine is small enough that nothing in it is LZO compressed,
 # which is why the rifle is kept alongside it.
@@ -39,10 +39,12 @@ V53_MODELS = r"P:\Mods\@Dead City Rebalance\Addons\IMPWMOD\weapons\automatic\hk4
 V53_MAGAZINE = os.path.join(V53_MODELS, "mag_hk417_10rnd.p3d")
 V53_RIFLE = os.path.join(V53_MODELS, "hk417.p3d")
 
-# ODOL v55, what the current AddonBuilder writes. Two bytes sit between ModelInfo and the
-# LOD address table where v54 keeps one and v53 none; ModelInfo itself is the same length
-# in all three. A third party mod's file, and equally not to be committed here.
+# ODOL v55, what the AddonBuilder wrote before 1.30. A third party mod's file, and equally
+# not to be committed here.
 V55_MODEL = r"Z:\Projects\DayZ Projects\AB_Models_SXDIST\workspace\CAWFA_CharactersRetex\data\eye_female.p3d"
+
+# ODOL v56 with doors: a skeleton and animation classes.
+ANIMATED_V56 = r"P:\DZ\structures\residential\houses\House_1W01.p3d"
 
 # Carries two UV sets in a visual LOD. Binarizing does not invent the second one, it is
 # in the source model, and a reader that drops it loses data silently.
@@ -60,8 +62,8 @@ def make_header(version = 54, count_lods = COUNT_LODS, prefix = b""):
     return io.BytesIO(data)
 
 
-def make_model_info():
-    # The DayZ v54 ModelInfo layout, written out field by field so that a change
+def make_model_info(version = 54, property_strings = ()):
+    # The DayZ ModelInfo layout, written out field by field so that a change
     # to the reader's field widths shows up here as a failure rather than as a
     # silently shifted cursor.
     data = struct.pack("<6I", 0, 0, 0, 0, 0, 0)     # index .. or_hints
@@ -71,6 +73,8 @@ def make_model_info():
     data += struct.pack("<9f", *([0.0] * 9))        # bounding, geometry, mass centres
     data += struct.pack("<9f", *([0.0] * 9))        # inv_inertia
     data += bytes([0, 0, 0, 1, 1])                  # autocenter .. allow_animation
+    if version >= 56:
+        data += struct.pack("<i", 0)
     data += struct.pack("<6f", 1.0, 0.0, 0.0, 0.0, 0.0, 0.0)  # thermal_profile
     data += struct.pack("<I", 0)                    # force_not_alpha (uint32 on DayZ)
     data += struct.pack("<i", 0)                    # sb_source
@@ -81,12 +85,16 @@ def make_model_info():
     data += bytes([0])                              # map_type
     data += struct.pack("<I", 0)                    # mass array, empty
     data += struct.pack("<4f", 1.0, 1.0, 1.0, 1.0)  # mass, inv_mass, armor, inv_armor
-    data += bytes([255] * 13)                       # special_lod_indices
+    data += bytes([255] * (13 if version >= 54 else 12))    # special_lod_indices
     data += struct.pack("<I", COUNT_LODS)           # min_shadow
     data += bytes([0])                              # can_blend
     data += b"\x00" + b"no\x00"                     # class, damage
     data += bytes([0])                              # frequent
-    data += struct.pack("<I", 0)                    # unknown
+    if version >= 55:
+        data += bytes([0])
+    data += struct.pack("<I", len(property_strings))
+    for value in property_strings:
+        data += value + b"\x00"
 
     return data
 
@@ -95,14 +103,15 @@ def make_animations():
     return struct.pack("<II", 0, 0)  # no animation classes, no bone mapping
 
 
-def make_model(middle, version = 54, last_lod_overrun = 0):
+def make_model(middle, version = 54, last_lod_overrun = 0, property_strings = ()):
     # `middle` is whatever sits between ModelInfo and the LOD address table.
     # `last_lod_overrun` pushes the end address of the LOD stored last past the end of
     # the file, which is what real v53 models do by 16 bytes.
     header = b"ODOL" + struct.pack("<II", version, COUNT_LODS)
     header += struct.pack("<%df" % COUNT_LODS, *[1.0] * COUNT_LODS)
 
-    table_end = len(header) + len(make_model_info()) + len(middle) + COUNT_LODS * 9
+    info = make_model_info(version, property_strings)
+    table_end = len(header) + len(info) + len(middle) + COUNT_LODS * 9
     starts = [table_end + i * BODY for i in range(COUNT_LODS)]
     ends = [start + BODY for start in starts]
     ends[-1] += last_lod_overrun
@@ -111,7 +120,7 @@ def make_model(middle, version = 54, last_lod_overrun = 0):
     table += struct.pack("<%dI" % COUNT_LODS, *ends)
     table += bytes([1] * COUNT_LODS)
 
-    data = header + make_model_info() + middle + table + b"\x00" * (BODY * COUNT_LODS)
+    data = header + info + middle + table + b"\x00" * (BODY * COUNT_LODS)
     return io.BytesIO(data), starts, ends
 
 
@@ -149,29 +158,46 @@ class TestCandidateSearch(unittest.TestCase):
         self.assertIn("hasAnims", str(caught.exception))
 
 
-class TestVersion55(unittest.TestCase):
-    """v55 puts two bytes between ModelInfo and the LOD address table. ModelInfo is the
-    same length as in v54, so all the reader needs is one more candidate offset, and it
-    must not take priority over the four that already exist."""
+class TestVersionLayouts(unittest.TestCase):
+    """Every version carries one hasAnims byte before the LOD address table. What differs
+    is the ModelInfo in front of it, and each of those fields shifts everything after it."""
 
-    def test_table_two_bytes_after_model_info(self):
-        file, starts, ends = make_model(b"\x00\x00", version = 55)
+    def check(self, middle, version, property_strings = ()):
+        file, starts, ends = make_model(middle, version = version, property_strings = property_strings)
         model = odol.ODOL_File.read(file)
 
-        self.assertEqual(model.version, 55)
+        self.assertEqual(model.version, version)
         self.assertEqual(model.lod_starts, starts)
         self.assertEqual(model.lod_ends, ends)
         self.assertEqual(model.permanent, [True] * COUNT_LODS)
+        return model
 
-    def test_version_55_is_accepted(self):
-        self.assertIn(55, odol.SUPPORTED_VERSIONS)
+    def test_every_version_without_animations(self):
+        for version in odol.SUPPORTED_VERSIONS:
+            with self.subTest(version = version):
+                model = self.check(b"\x00", version)
+                self.assertFalse(model.animations)
 
-    def test_v54_still_takes_the_one_byte_shape(self):
-        # The new candidate is last, so v54 has to keep resolving on the hasAnims byte
-        # rather than on the two byte offset.
-        file, starts, ends = make_model(b"\x00", version = 54)
-        model = odol.ODOL_File.read(file)
-        self.assertEqual(model.lod_starts, starts)
+    def test_every_version_with_animations(self):
+        for version in odol.SUPPORTED_VERSIONS:
+            with self.subTest(version = version):
+                model = self.check(b"\x01" + make_animation_block(), version)
+                self.assertEqual(len(model.animations.classes), 2)
+
+    def test_property_strings_are_walked(self):
+        for version in odol.SUPPORTED_VERSIONS:
+            with self.subTest(version = version):
+                self.check(b"\x00", version, (b"first", b"second"))
+
+    def test_version_56_is_accepted(self):
+        self.assertIn(56, odol.SUPPORTED_VERSIONS)
+
+    def test_version_57_is_rejected(self):
+        file, _, _ = make_model(b"\x00", version = 57)
+        with self.assertRaises(odol.ODOL_Error) as caught:
+            odol.ODOL_File.read(file)
+
+        self.assertIn("Unsupported ODOL version: 57", str(caught.exception))
 
 
 class TestKeyframes(unittest.TestCase):
@@ -224,7 +250,7 @@ class TestHeader(unittest.TestCase):
             model = odol.ODOL_File.read(file)
 
         size = os.path.getsize(DRUM)
-        self.assertEqual(model.version, 54)
+        self.assertEqual(model.version, 56)
         self.assertEqual(model.offset, 0)
         self.assertGreater(len(model.resolutions), 0)
         self.assertEqual(len(model.lod_starts), len(model.resolutions))
@@ -244,8 +270,8 @@ class TestHeader(unittest.TestCase):
             model = odol.ODOL_File.read(file)
 
         self.assertEqual(len(model.resolutions), 9)
-        self.assertEqual(model.lod_starts, [124410, 80501, 68174, 60218, 5924, 4728, 3579, 2417, 860])
-        self.assertEqual(model.lod_ends, [195980, 124410, 80501, 68174, 60218, 5924, 4728, 3579, 2417])
+        self.assertEqual(model.lod_starts, [124461, 80542, 68204, 60236, 5929, 4733, 3584, 2422, 865])
+        self.assertEqual(model.lod_ends, [196038, 124461, 80542, 68204, 60236, 5929, 4733, 3584, 2422])
         self.assertEqual(model.permanent, [False, False, False, True, False, True, True, True, True])
 
     def test_lod_table_spans_the_whole_body(self):
@@ -282,8 +308,8 @@ class TestCompressedMassArray(unittest.TestCase):
         with open(HOUSE, "rb") as file:
             model = odol.ODOL_File.read(file)
 
-        self.assertEqual(model.lod_starts, [318642, 143689, 137902, 117554, 115601, 112442, 110371, 89934, 2450])
-        self.assertEqual(model.lod_ends, [643952, 318642, 143689, 137902, 117554, 115601, 112442, 110371, 89934])
+        self.assertEqual(model.lod_starts, [318770, 143719, 137932, 117584, 115631, 112472, 110401, 89948, 2455])
+        self.assertEqual(model.lod_ends, [644228, 318770, 143719, 137932, 117584, 115631, 112472, 110401, 89948])
         self.assertEqual(model.permanent, [False, False, True, True, True, True, True, True, True])
 
 
@@ -916,6 +942,9 @@ class TestMaterialLayoutSearch(unittest.TestCase):
     def test_recovers_the_width_with_a_surface_file(self):
         self.check(make_material(surface = "dz\\data\\penetration\\metalPlate.bisurf"))
 
+    def test_a_stage_texture_may_carry_a_newline(self):
+        self.check(make_material(stages = ("#(ai,64,64,1)fresnel(0.71,0.57)\n#(ai,64,64,1)fresnel(0.71,0.57)",)))
+
     def test_a_stage_texture_may_carry_a_tab(self):
         # Procedural texture strings end in one, and rejecting it costs whole LODs.
         self.check(make_material(stages = ("#(argb,8,8,3)color(1,1,1,1,co)\t",)))
@@ -983,9 +1012,9 @@ class TestMaterialGuard(unittest.TestCase):
 
 @unittest.skipUnless(os.path.isfile(V53_MAGAZINE), "test corpus not available")
 class TestVersion53(unittest.TestCase):
-    """ODOL v53, which is what the DayZ Tools binarizer writes and so what almost every
-    mod on disk contains. It differs from the v54 the game ships in exactly two places,
-    and both are checked here against a real model."""
+    """ODOL v53, which is what older DayZ Tools binarizers wrote and so what almost every
+    mod on disk contains. Its material layout and the tail on its last LOD are checked
+    here against a real model."""
 
     @classmethod
     def setUpClass(cls):
@@ -1165,6 +1194,59 @@ class TestVersion55Model(unittest.TestCase):
         self.assertEqual(len(self.model.skeleton.bones), 159)
 
 
+@unittest.skipUnless(os.path.isfile(ANIMATED_V56), "test corpus not available")
+class TestVersion56Animated(unittest.TestCase):
+    """A real v56 model carrying animation classes, where the hasAnims byte is set and so
+    the LOD table search has nothing to fall back on if ModelInfo is the wrong length."""
+
+    @classmethod
+    def setUpClass(cls):
+        with open(ANIMATED_V56, "rb") as file:
+            cls.model = odol.ODOL_File.read(file)
+
+    def test_version_and_lods(self):
+        self.assertEqual(self.model.version, 56)
+        self.assertEqual(len(self.model.lods), 9)
+        self.assertEqual(self.model.failed_lods, [])
+
+    def test_lod_table_matches_measured_values(self):
+        self.assertEqual(self.model.lod_starts, [239139, 95684, 91950, 74885, 73331, 70299, 68183, 50715, 1649])
+        self.assertEqual(self.model.lod_ends, [792004, 239139, 95684, 91950, 74885, 73331, 70299, 68183, 50715])
+
+    def test_skeleton(self):
+        self.assertEqual(self.model.skeleton.name, "Skeleton3Doors")
+        self.assertEqual(self.model.skeleton.bones, ["doors1", "doors2", "doors3"])
+
+    def test_animation_classes(self):
+        classes = self.model.animations.classes
+        self.assertEqual([item.name for item in classes], ["Doors1", "Doors2", "Doors3"])
+        self.assertEqual([item.source for item in classes], ["doors1", "doors2", "doors3"])
+
+    def test_every_lod_is_covered_by_the_bone_mapping(self):
+        for item in self.model.animations.classes:
+            self.assertEqual(len(item.bones), 9)
+
+    def test_bounding_center_is_read(self):
+        for value, expected in zip(self.model.bounding_center, (-0.0154, 2.9239, -2.6715)):
+            self.assertAlmostEqual(value, expected, places = 4)
+
+    def test_conversion_adds_the_bounding_center_back(self):
+        raw = self.model.lods[0]
+        converted = odol_to_mlod.convert(self.model).lods[0]
+        center_x, center_y, center_z = self.model.bounding_center
+
+        for (raw_x, raw_y, raw_z), vertex in zip(raw.vertices, converted.verts):
+            self.assertAlmostEqual(vertex[0], raw_x + center_x, places = 4)
+            self.assertAlmostEqual(vertex[1], raw_z + center_z, places = 4)
+            self.assertAlmostEqual(vertex[2], raw_y + center_y, places = 4)
+
+    def test_conversion_leaves_the_raw_lod_alone(self):
+        # The animation axes a model.cfg is rebuilt from are matched against these.
+        before = list(self.model.lods[0].vertices)
+        odol_to_mlod.convert(self.model)
+        self.assertEqual(self.model.lods[0].vertices, before)
+
+
 @unittest.skipUnless(os.path.isfile(TWO_UV_SETS), "test corpus not available")
 class TestMultipleUVSets(unittest.TestCase):
     """The second UV set is read rather than skipped, and reaches the MLOD as its own
@@ -1338,16 +1420,19 @@ CORPUS_GUARANTEES = (
              "selection member, and the weight byte maps as byte/255; only a rigged garment shows it"),
     (DRUM, "TestConversion (55galDrum.p3d) - the ODOL->MLOD conversion, and in particular that the "
            "converted faces keep their stored winding and unflipped normals both pointing outward "
-           "(vertices absolute with no centre offset), which the brief's sketch gets backwards"),
+           "(the drum has autocenter off, so its bounding centre is zero), which the brief's sketch "
+           "gets backwards"),
     (V53_MAGAZINE, "TestVersion53 (mag_hk417_10rnd.p3d) - ODOL v53, the version the DayZ Tools "
                    "binarizer writes and so the one almost every mod contains: that its material "
                    "layout is recovered at the v53 widths, and that the LOD stored last really does "
                    "declare an end 16 bytes past the file, which is what TRAILING_SLACK exists for"),
     (V53_RIFLE, "TestVersion53Rifle (hk417.p3d) - the same v53 layout surviving LZO compressed "
                 "vertex, normal and index arrays, which the magazine is too small to reach"),
-    (V55_MODEL, "TestVersion55Model (eye_female.p3d) - ODOL v55, what the current AddonBuilder "
-                "writes: two bytes between ModelInfo and the LOD address table instead of one, "
-                "with ModelInfo itself unchanged in length"),
+    (V55_MODEL, "TestVersion55Model (eye_female.p3d) - ODOL v55, what the AddonBuilder wrote "
+                "before 1.30: one more byte after propertyFrequent"),
+    (ANIMATED_V56, "TestVersion56Animated (House_1W01.p3d) - ODOL v56, what the game ships since "
+                   "1.30: a real model with a skeleton and animation classes, the shape in which "
+                   "a wrong ModelInfo length cannot be absorbed by the LOD table search"),
     (TWO_UV_SETS, "TestMultipleUVSets (6b3_f.p3d) - that the second UV set is read and reaches "
                   "the MLOD as its own tagg. 520 of the corpus' 2716 LODs carry one, and without "
                   "this test it is dropped silently"),

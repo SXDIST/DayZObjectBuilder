@@ -4,15 +4,14 @@
 # This module only reads; ODOL is never written. Parsed data is converted into the
 # MLOD model by odol_to_mlod.py, so the rest of the add-on sees one representation.
 #
-# Layout follows the publicly documented ODOL structure. DayZ ships three versions: the
-# game's own files are version 54, the DayZ Tools binarizer writes 53, which is what
-# almost every mod on disk actually contains (3279 against 70 over a 3356 model survey
-# of an installed mod set), and the current AddonBuilder writes 55. All three differ
-# from Arma 3 in ModelInfo field set, material version and an inconsistent hasAnims
-# byte; those differences are handled explicitly below. Between themselves they differ
-# in the material layout, a tolerated tail on the last LOD, and how many bytes separate
-# ModelInfo from the LOD address table (none, one and two respectively), all documented
-# where they are handled.
+# Layout follows the publicly documented ODOL structure. DayZ has four versions in the
+# wild: the game's own files and the DayZ Tools binarizer are at 56 since DayZ 1.30, older
+# game files are 54, older binarizers wrote 53, which is what almost every mod on disk
+# still contains (3279 against 70 over a 3356 model survey of an installed mod set), and
+# the AddonBuilder before 1.30 wrote 55. All of them differ from Arma 3 in ModelInfo field
+# set, material version and an inconsistent hasAnims byte; those differences are handled
+# explicitly below. Between themselves they differ in the material layout, a tolerated
+# tail on the last LOD and a few ModelInfo fields, all documented where they are handled.
 #
 # The ModelInfo layout below was derived by measurement against DayZ v54 models,
 # because the published documentation covers the Arma 3 field set only. Rather
@@ -34,7 +33,7 @@ class ODOL_Error(Exception):
 
 
 SIGNATURE = b"ODOL"
-SUPPORTED_VERSIONS = (53, 54, 55)
+SUPPORTED_VERSIONS = (53, 54, 55, 56)
 
 # The LOD stored last in the file may declare an end address this far past both the end
 # of the file and the end of its own rest data. Measured over 657 v53 models: 198 of them
@@ -89,17 +88,19 @@ def find_odol_offset(file):
 #   mass, inv_mass, armor, inv_armor    float x4
 #   special_lod_indices   byte[13]     min_shadow            uint32
 #   can_blend             bool         class, damage         asciiz x2
-#   frequent              bool         unknown               uint32
+#   frequent              bool         property strings      uint32 count + asciiz[count]
 #
 # The three DayZ additions total five bytes over the Arma 3 field set.
 #
 # What is kept is what an editable model cannot be rebuilt without: the skeleton, which
-# only exists here once a model has been binarized, and the per point mass array, which
-# is the Geometry LOD's #Mass# tagg folded into the header. Everything else is walked.
+# only exists here once a model has been binarized, the per point mass array, which
+# is the Geometry LOD's #Mass# tagg folded into the header, and the bounding centre, which
+# binarizing subtracted from every vertex. Everything else is walked.
 class ODOL_ModelInfo():
     def __init__(self):
         self.skeleton = ODOL_Skeleton()
         self.masses = []
+        self.bounding_center = (0.0, 0.0, 0.0)
 
 
 def read_model_info(file, version, file_size):
@@ -109,9 +110,12 @@ def read_model_info(file, version, file_size):
     file.seek(4 * 3, 1)             # aiming_center
     file.seek(4 * 3, 1)             # map colours, view_density
     file.seek(4 * 3 * 4, 1)         # bbox min/max, visual min/max
-    file.seek(4 * 3 * 3, 1)         # bounding, geometry and mass centres
+    output.bounding_center = tuple(binary.read_floats(file, 3))
+    file.seek(4 * 3 * 2, 1)         # geometry and mass centres
     file.seek(4 * 9, 1)             # inv_inertia
     file.seek(5, 1)                 # autocenter .. allow_animation
+    if version >= 56:
+        file.seek(4, 1)
     file.seek(4 * 6, 1)             # thermal_profile
     file.seek(4, 1)                 # force_not_alpha (uint32 on DayZ)
     file.seek(4, 1)                 # sb_source
@@ -124,13 +128,17 @@ def read_model_info(file, version, file_size):
     file.seek(1, 1)                 # map_type
     output.masses = read_compressed_floats(file, file_size)  # per point, geometry LOD
     file.seek(4 * 4, 1)             # mass, inv_mass, armor, inv_armor
-    file.seek(13, 1)                # special_lod_indices
+    file.seek(13 if version >= 54 else 12, 1)   # special_lod_indices
     file.seek(4, 1)                 # min_shadow
     file.seek(1, 1)                 # can_blend
     binary.read_asciiz(file)        # class
     binary.read_asciiz(file)        # damage
     file.seek(1, 1)                 # frequent
-    file.seek(4, 1)                 # unknown
+    if version >= 55:
+        file.seek(1, 1)
+
+    for _ in range(read_count(file, file_size, "property string")):
+        binary.read_asciiz(file)
 
     return output
 
@@ -445,14 +453,6 @@ def read_lod_table(file, model, count_lods, file_size):
         ("animations without hasAnims byte", after_animations),
         ("hasAnims byte, no animations", lambda: (base + 1, ODOL_Animations())),
         ("no hasAnims byte, no animations", lambda: (base, ODOL_Animations())),
-        # v55 puts TWO bytes here where v54 puts one and v53 none. ModelInfo itself is
-        # the same length in all three - v53 pays for its missing geometrySimple byte
-        # with an extra one before propertyClass - so this is the only change v55 needs.
-        # Kept last on purpose: over the 631 ODOL models of the local corpus the four
-        # shapes above still win everywhere they used to (D 567, A 44, B 9, C 9) and
-        # this one is reached by exactly the 2 v55 files, which is what pins it as the
-        # v55 shape rather than a looser fallback that happens to validate.
-        ("no hasAnims byte, table two bytes on", lambda: (base + 2, ODOL_Animations())),
     ]
 
     failures = []
@@ -492,7 +492,7 @@ def read_lod_table(file, model, count_lods, file_size):
 #
 # The extended block is the only variable part, and its width follows no rule worth
 # extrapolating: measured 10 floats at material version 15, 14 at 16 and 26 at 20
-# (ODOL v53 writes 15 and 16, v54 writes 20). Guessing it is the expensive kind of
+# (ODOL v53 writes 15 and 16, v54 and later write 20). Guessing it is the expensive kind of
 # wrong, because a material is read inline: a bad width does not fail where it happens,
 # it silently shifts every following field in the LOD.
 #
@@ -521,10 +521,11 @@ MAX_MATERIAL_STAGES = 64
 # never be, since that rejection is half of what makes the search decisive.
 MAX_MATERIAL_STRING = 512
 
-# Printable ASCII, and tab. The tab is not a courtesy: procedural texture strings carry
-# a trailing one, as in "#(argb,8,8,3)color(1,1,1,1,co)\t". Rejecting it costs whole
-# LODs, 59 of them over a 1018 model sweep of the game files.
-MATERIAL_STRING_BYTES = frozenset([9]) | frozenset(range(32, 127))
+# Printable ASCII, tab and newline. The tab is not a courtesy: procedural texture strings
+# carry a trailing one, as in "#(argb,8,8,3)color(1,1,1,1,co)\t". Rejecting it costs whole
+# LODs, 59 of them over a 1018 model sweep of the game files. The newline is rarer, one
+# model in the 10623 of the 1.30 game files, Victory_Arch.p3d, and it costs five LODs.
+MATERIAL_STRING_BYTES = frozenset([9, 10]) | frozenset(range(32, 127))
 
 
 def read_material_asciiz(file):
@@ -1067,6 +1068,7 @@ class ODOL_File():
         self.skeleton = ODOL_Skeleton()
         self.animations = ODOL_Animations()
         self.masses = []
+        self.bounding_center = (0.0, 0.0, 0.0)
         self.resolutions = []
         self.lod_starts = []
         self.lod_ends = []
@@ -1117,6 +1119,7 @@ class ODOL_File():
 
         output.skeleton = model_info.skeleton
         output.masses = model_info.masses
+        output.bounding_center = model_info.bounding_center
 
         read_lod_table(file, output, count_lods, file_size)
 
